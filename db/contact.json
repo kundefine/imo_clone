@@ -1,0 +1,73 @@
+[
+  {
+    "id": "c1",
+    "name": "Musu Khala Bl",
+    "subtitle": "Audio call",
+    "date": "Feb 11",
+    "accent": "#9C7E84",
+    "icon": "phone",
+    "subtitleTone": "muted"
+  },
+  {
+    "id": "c2",
+    "name": "imo Team",
+    "subtitle": "Add Login Email You'll receive login veri...",
+    "date": "Oct 2025",
+    "icon": "chevron",
+    "subtitleTone": "muted"
+  },
+  {
+    "id": "c3",
+    "name": "Jorna",
+    "subtitle": "Canceled",
+    "date": "Aug 2025",
+    "accent": "#7FA59A",
+    "icon": "phone",
+    "subtitleTone": "muted"
+  },
+  {
+    "id": "c4",
+    "name": "Chamily Bhagne",
+    "subtitle": "+880 1930-932309",
+    "date": "Jul 2025",
+    "accent": "#585F67",
+    "icon": "phone",
+    "subtitleTone": "normal"
+  },
+  {
+    "id": "c5",
+    "name": "Ammu",
+    "subtitle": "Canceled",
+    "date": "Jul 2025",
+    "accent": "#6F6A78",
+    "icon": "phone",
+    "subtitleTone": "normal"
+  },
+  {
+    "id": "c6",
+    "name": "Makon bl new",
+    "subtitle": "Missed Audio Call",
+    "date": "Jul 2025",
+    "accent": "#88A95F",
+    "icon": "phone",
+    "subtitleTone": "danger"
+  },
+  {
+    "id": "c7",
+    "name": "MD.Kamrul Islam",
+    "subtitle": "Heart",
+    "date": "Jul 2025",
+    "accent": "#679782",
+    "icon": "phone",
+    "subtitleTone": "emoji"
+  },
+  {
+    "id": "c8",
+    "name": "Sumaiya Apu",
+    "subtitle": "Heart",
+    "date": "Jul 2025",
+    "accent": "#BA526C",
+    "icon": "phone",
+    "subtitleTone": "emoji"
+  }
+]

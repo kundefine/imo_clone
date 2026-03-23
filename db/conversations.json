@@ -4,6 +4,32 @@
     "lastSeen": "Last seen 8:41 PM",
     "messages": [
       {
+        "id": "c3-m6",
+        "type": "call",
+        "sender": "them",
+        "title": "Missed video call",
+        "subtitle": "Tap to call",
+        "time": "10:45 PM",
+        "callTone": "missed"
+      },
+      {
+        "id": "c3-m7",
+        "type": "call",
+        "sender": "me",
+        "title": "Video call",
+        "subtitle": "2 min 54 sec",
+        "time": "10:50 PM",
+        "callTone": "done"
+      },
+      {
+        "id": "c3-m8",
+        "type": "image",
+        "sender": "me",
+        "time": "10:51 PM",
+        "caption": "Portrait photo",
+        "imageTone": "portrait"
+      },
+      {
         "id": "c3-d1",
         "type": "date",
         "label": "Sep 23, 2024"
@@ -49,43 +75,12 @@
         "label": "Sep 24, 2024"
       },
       {
-        "id": "c3-m6",
+        "id": "c3-m9",
         "type": "image",
         "sender": "me",
         "time": "4:43 PM",
         "caption": "Math note photo",
         "imageTone": "paper"
-      },
-      {
-        "id": "c3-d3",
-        "type": "date",
-        "label": "Oct 3, 2024"
-      },
-      {
-        "id": "c3-m7",
-        "type": "call",
-        "sender": "them",
-        "title": "Missed video call",
-        "subtitle": "Tap to call",
-        "time": "10:45 PM",
-        "callTone": "missed"
-      },
-      {
-        "id": "c3-m8",
-        "type": "call",
-        "sender": "me",
-        "title": "Video call",
-        "subtitle": "2 min 54 sec",
-        "time": "10:50 PM",
-        "callTone": "done"
-      },
-      {
-        "id": "c3-m9",
-        "type": "image",
-        "sender": "me",
-        "time": "10:51 PM",
-        "caption": "Portrait photo",
-        "imageTone": "portrait"
       }
     ]
   },

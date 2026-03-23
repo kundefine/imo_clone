@@ -247,7 +247,7 @@ export default function App() {
                   <View
                     style={[
                       styles.messageBubbleWrap,
-                      mine ? styles.messageBubbleWrapMine : styles.messageBubbleWrapTheirs,
+                      mine ? styles.bubbleContainerMine : styles.messageBubbleWrapTheirs,
                     ]}
                   >
                     <View
@@ -257,11 +257,12 @@ export default function App() {
                       ]}
                     >
                     <Text style={styles.messageText}>{item.text}</Text>
-                    <View style={styles.messageMetaRow}>
-                      <Text style={styles.messageTime}>{item.time}</Text>
-                      <View style={styles.messageSeenDot} />
+                      <View style={styles.messageMetaRow}>
+                        <Text style={styles.messageTime}>{item.time}</Text>
+                        <View style={styles.messageSeenDot} />
+                      </View>
                     </View>
-                  </View>
+                    {mine ? <View style={styles.tailMine} /> : null}
                   </View>
 
                   {mine ? (
@@ -287,13 +288,13 @@ export default function App() {
                   <View
                     style={[
                       styles.callCardWrap,
-                      mine ? styles.callCardWrapMine : styles.callCardWrapTheirs,
+                      mine ? styles.bubbleContainerMine : styles.callCardWrapTheirs,
                     ]}
                   >
                     <View
                       style={[
                         styles.callCard,
-                        mine ? styles.messageBubbleMine : styles.callCardTheirs,
+                        mine ? styles.callCardMine : styles.callCardTheirs,
                       ]}
                     >
                       <View style={styles.callCardContent}>
@@ -317,6 +318,7 @@ export default function App() {
                         {mine ? <View style={styles.messageSeenDot} /> : null}
                       </View>
                     </View>
+                    {mine ? <View style={styles.tailMine} /> : null}
                   </View>
 
                   {mine ? (
@@ -341,7 +343,7 @@ export default function App() {
                 <View
                   style={[
                     styles.imageCardWrap,
-                    mine ? styles.imageCardWrapMine : styles.imageCardWrapTheirs,
+                    mine ? styles.bubbleContainerMine : styles.imageCardWrapTheirs,
                   ]}
                 >
                   <View style={[styles.imageCard, mine ? styles.imageCardMine : styles.imageCardTheirs]}>
@@ -358,6 +360,7 @@ export default function App() {
                       <View style={styles.messageSeenDot} />
                     </View>
                   </View>
+                  {mine ? <View style={styles.tailMine} /> : null}
                 </View>
 
                 {mine ? (
@@ -825,9 +828,9 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     backgroundColor: '#3A3B40',
     borderRadius: 18,
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-    marginVertical: 12,
+    paddingHorizontal: 18,
+    paddingVertical: 7,
+    marginVertical: 10,
   },
   dateBadgeText: {
     color: '#FFFFFF',
@@ -837,7 +840,7 @@ const styles = StyleSheet.create({
   messageRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    marginBottom: 12,
+    marginBottom: 10,
   },
   messageRowMine: {
     justifyContent: 'flex-end',
@@ -846,16 +849,21 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
   },
   messageBubble: {
-    maxWidth: 236,
-    minWidth: 118,
+    maxWidth: 250,
+    minWidth: 136,
     borderRadius: 24,
-    paddingHorizontal: 18,
-    paddingVertical: 14,
-    marginHorizontal: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 15,
   },
   messageBubbleWrap: {
     position: 'relative',
     marginHorizontal: 8,
+  },
+  bubbleContainerMine: {
+    position: 'relative',
+    marginHorizontal: 8,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
   },
   messageBubbleWrapMine: {
     marginRight: 2,
@@ -865,14 +873,31 @@ const styles = StyleSheet.create({
     backgroundColor: '#045D94',
     borderWidth: 1,
     borderColor: '#0C6FAE',
-    borderTopRightRadius: 12,
+    borderTopRightRadius: 2,
   },
   messageBubbleTheirs: {
     backgroundColor: '#2E2C2D',
   },
   sentAvatarWrap: {
-    marginLeft: 6,
-    marginTop: 2,
+    marginLeft: 14,
+    marginTop: -2,
+  },
+  tailMine: {
+    position: 'absolute',
+    top: 1,
+    right: -7,
+    width: 0,
+    height: 0,
+    backgroundColor: 'transparent',
+    borderStyle: 'solid',
+    borderLeftWidth: 20,
+    borderTopWidth: 20,
+    borderRightWidth: 0,
+    borderBottomWidth: 0,
+    borderLeftColor: '#045D94',
+    borderTopColor: 'transparent',
+    borderRightColor: 'transparent',
+    borderBottomColor: 'transparent',
   },
   messageText: {
     color: '#FFFFFF',
@@ -906,7 +931,7 @@ const styles = StyleSheet.create({
   },
   imageCardWrapTheirs: {},
   imageCard: {
-    width: 260,
+    width: 272,
     borderRadius: 26,
     padding: 6,
   },
@@ -914,14 +939,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#045D94',
     borderWidth: 1,
     borderColor: '#0C6FAE',
-    borderTopRightRadius: 12,
+    borderTopRightRadius: 2,
   },
   imageCardTheirs: {
     backgroundColor: '#2E2C2D',
   },
   imageMock: {
     borderRadius: 22,
-    minHeight: 240,
+    height: 330,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 18,
@@ -930,7 +955,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#9C8450',
   },
   imageMockPortrait: {
-    backgroundColor: '#56BCE9',
+    backgroundColor: '#88DDF2',
   },
   imageMockLabel: {
     color: '#FFFFFF',
@@ -954,11 +979,16 @@ const styles = StyleSheet.create({
   },
   callCardWrapTheirs: {},
   callCard: {
-    width: 250,
+    width: 258,
     borderRadius: 24,
     paddingHorizontal: 16,
     paddingVertical: 14,
-    borderTopRightRadius: 12,
+    borderTopRightRadius: 2,
+  },
+  callCardMine: {
+    backgroundColor: '#045D94',
+    borderWidth: 1,
+    borderColor: '#0C6FAE',
   },
   callCardTheirs: {
     backgroundColor: '#2E2C2D',
@@ -986,12 +1016,12 @@ const styles = StyleSheet.create({
   },
   callTitle: {
     color: '#FFFFFF',
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '700',
   },
   callSubtitle: {
     color: '#A9B2B7',
-    fontSize: 10,
+    fontSize: 11,
     marginTop: 4,
   },
   callFooter: {
@@ -1002,7 +1032,7 @@ const styles = StyleSheet.create({
   },
   callTime: {
     color: '#A9B2B7',
-    fontSize: 10,
+    fontSize: 11,
   },
   reactionBar: {
     backgroundColor: '#101114',

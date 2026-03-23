@@ -1,18 +1,11 @@
 import { FontAwesome5 } from '@expo/vector-icons';
 import { Camera, ChatBubble, ChatLines, NavArrowRight } from 'iconoir-react-native';
-import {
-  ArrowLeft,
-  Image as ImageIcon,
-  MoreVertical,
-  Phone,
-  Plus,
-  Search,
-  Smile,
-  Video,
-} from 'lucide-react-native';
+import { ArrowLeft, Image as ImageIcon, MoreVertical, Plus, Search, Smile, Video } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import { Platform, StatusBar } from 'react-native';
 import {
+  Image,
+  ImageSourcePropType,
   SafeAreaView,
   ScrollView,
   StyleSheet,
@@ -38,6 +31,7 @@ type ContactItem = {
   name: string;
   subtitle: string;
   date: string;
+  avater?: string;
   accent?: string;
   icon: 'phone' | 'chevron';
   subtitleTone?: 'normal' | 'muted' | 'danger' | 'emoji';
@@ -89,6 +83,15 @@ const stories: StoryItem[] = [
 
 const reactions = ['🎲', '😡', '😭', '😩', '🥲', '👻', '😞', '😘', '💕'];
 
+const avatarSources: Record<string, ImageSourcePropType> = {
+  '../assets/avater/deepaknaik-soniya-bansal-8065649.jpg': require('./assets/avater/deepaknaik-soniya-bansal-8065649.jpg'),
+  '../assets/avater/ghostw1997-aodai-6004289.jpg': require('./assets/avater/ghostw1997-aodai-6004289.jpg'),
+  '../assets/avater/hiteshhtsharma-srishti-textile-9876622.jpg': require('./assets/avater/hiteshhtsharma-srishti-textile-9876622.jpg'),
+  '../assets/avater/rachealmarie-ai-generated-8626079_1920.jpg': require('./assets/avater/rachealmarie-ai-generated-8626079_1920.jpg'),
+  '../assets/avater/raheel9630-aditi-rao-hydari-1748439_1920.jpg': require('./assets/avater/raheel9630-aditi-rao-hydari-1748439_1920.jpg'),
+  '../assets/avater/raheel9630-priyanka-chopra-1748203_1920.jpg': require('./assets/avater/raheel9630-priyanka-chopra-1748203_1920.jpg'),
+};
+
 function CircleAvatar({
   label,
   accent,
@@ -114,6 +117,40 @@ function CircleAvatar({
         {label}
       </Text>
     </View>
+  );
+}
+
+function ContactAvatar({
+  contact,
+  size = 64,
+}: {
+  contact: ContactItem;
+  size?: number;
+}) {
+  const source = contact.avater ? avatarSources[contact.avater] : undefined;
+
+  if (source) {
+    return (
+      <Image
+        source={source}
+        style={[
+          styles.photoAvatar,
+          {
+            width: size,
+            height: size,
+            borderRadius: size / 2,
+          },
+        ]}
+      />
+    );
+  }
+
+  return (
+    <CircleAvatar
+      label={contact.name.slice(0, 1)}
+      accent={contact.accent || '#5F6670'}
+      size={size}
+    />
   );
 }
 
@@ -213,7 +250,7 @@ export default function App() {
           </View>
 
           <View style={styles.chatHeaderActions}>
-            <Phone color="#08A4FF" size={24} strokeWidth={2.5} />
+            <FontAwesome5 name="phone-alt" size={20} color="#08A4FF" solid />
             <Video color="#08A4FF" size={24} strokeWidth={2.5} />
             <MoreVertical color="#FFFFFF" size={22} strokeWidth={2.2} />
           </View>
@@ -241,7 +278,7 @@ export default function App() {
                   style={[styles.messageRow, mine ? styles.messageRowMine : styles.messageRowTheirs]}
                 >
                   {!mine ? (
-                    <CircleAvatar label={activeContact.name.slice(0, 1)} accent={activeContact.accent || '#6A7A8B'} size={44} />
+                    <ContactAvatar contact={activeContact} size={44} />
                   ) : null}
 
                   <View
@@ -262,12 +299,11 @@ export default function App() {
                         <View style={styles.messageSeenDot} />
                       </View>
                     </View>
-                    {mine ? <View style={styles.tailMine} /> : null}
                   </View>
 
                   {mine ? (
                     <View style={styles.sentAvatarWrap}>
-                      <CircleAvatar label="S" accent="#BDEBDD" size={40} />
+                  <CircleAvatar label="S" accent="#BDEBDD" size={30} />
                     </View>
                   ) : null}
                 </View>
@@ -282,7 +318,7 @@ export default function App() {
                   style={[styles.messageRow, mine ? styles.messageRowMine : styles.messageRowTheirs]}
                 >
                   {!mine ? (
-                    <CircleAvatar label={activeContact.name.slice(0, 1)} accent={activeContact.accent || '#6A7A8B'} size={44} />
+                    <ContactAvatar contact={activeContact} size={44} />
                   ) : null}
 
                   <View
@@ -318,12 +354,11 @@ export default function App() {
                         {mine ? <View style={styles.messageSeenDot} /> : null}
                       </View>
                     </View>
-                    {mine ? <View style={styles.tailMine} /> : null}
                   </View>
 
                   {mine ? (
                     <View style={styles.sentAvatarWrap}>
-                      <CircleAvatar label="S" accent="#BDEBDD" size={40} />
+                      <CircleAvatar label="S" accent="#BDEBDD" size={30} />
                     </View>
                   ) : null}
                 </View>
@@ -337,7 +372,7 @@ export default function App() {
                 style={[styles.messageRow, mine ? styles.messageRowMine : styles.messageRowTheirs]}
               >
                 {!mine ? (
-                  <CircleAvatar label={activeContact.name.slice(0, 1)} accent={activeContact.accent || '#6A7A8B'} size={44} />
+                  <ContactAvatar contact={activeContact} size={44} />
                 ) : null}
 
                 <View
@@ -360,12 +395,11 @@ export default function App() {
                       <View style={styles.messageSeenDot} />
                     </View>
                   </View>
-                  {mine ? <View style={styles.tailMine} /> : null}
                 </View>
 
                 {mine ? (
                   <View style={styles.sentAvatarWrap}>
-                    <CircleAvatar label="S" accent="#BDEBDD" size={40} />
+                    <CircleAvatar label="S" accent="#BDEBDD" size={30} />
                   </View>
                 ) : null}
               </View>
@@ -464,11 +498,7 @@ export default function App() {
                 <Text style={styles.teamAvatarText}>imo</Text>
               </View>
             ) : (
-              <CircleAvatar
-                label={item.name.slice(0, 1)}
-                accent={item.accent || '#5F6670'}
-                size={72}
-              />
+              <ContactAvatar contact={item} size={62} />
             )}
 
             <View style={styles.contactBody}>
@@ -483,7 +513,7 @@ export default function App() {
               {item.icon === 'chevron' ? (
                 <NavArrowRight color="#727780" width={18} height={18} strokeWidth={2.2} />
               ) : (
-                <Phone color="#00A0FF" size={22} strokeWidth={2.4} />
+                <FontAwesome5 name="phone-alt" size={18} color="#00A0FF" solid />
               )}
             </View>
           </TouchableOpacity>
@@ -757,6 +787,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     overflow: 'hidden',
   },
+  photoAvatar: {
+    backgroundColor: '#303238',
+  },
   teamAvatar: {
     width: 72,
     height: 72,
@@ -881,23 +914,6 @@ const styles = StyleSheet.create({
   sentAvatarWrap: {
     marginLeft: 14,
     marginTop: -2,
-  },
-  tailMine: {
-    position: 'absolute',
-    top: 1,
-    right: -7,
-    width: 0,
-    height: 0,
-    backgroundColor: 'transparent',
-    borderStyle: 'solid',
-    borderLeftWidth: 20,
-    borderTopWidth: 20,
-    borderRightWidth: 0,
-    borderBottomWidth: 0,
-    borderLeftColor: '#045D94',
-    borderTopColor: 'transparent',
-    borderRightColor: 'transparent',
-    borderBottomColor: 'transparent',
   },
   messageText: {
     color: '#FFFFFF',

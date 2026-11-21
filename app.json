@@ -18,6 +18,7 @@
       }
     },
     "android": {
+      "package": "com.imo.clone",
       "adaptiveIcon": {
         "backgroundColor": "#ffffff",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -25,7 +26,11 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "permissions": ["READ_CONTACTS"]
+      "permissions": [
+        "READ_CONTACTS",
+        "android.permission.READ_CONTACTS",
+        "android.permission.WRITE_CONTACTS"
+      ]
     },
     "plugins": [
       [
@@ -37,6 +42,11 @@
     ],
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "3dc3edd6-bb1a-4732-aae6-3bcb41955489"
+      }
     }
   }
 }

@@ -1,5 +1,4 @@
 import { FontAwesome5 } from '@expo/vector-icons';
-import { Camera, ChatBubble, ChatLines, NavArrowRight } from 'iconoir-react-native';
 import { ArrowLeft, MoreVertical, Plus, Search } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import {
@@ -23,21 +22,20 @@ const conversations = require('./db/conversations.json') as ConversationThread[]
 type StoryItem = {
   id: string;
   name: string;
-  accent?: string;
-  badge?: string;
+  image?: ImageSourcePropType;
   plus?: boolean;
-  marketplace?: boolean;
 };
 
 type ContactItem = {
   id: string;
   name: string;
   subtitle: string;
+  subtitleType?: 'missed_call' | 'emoji' | 'audio' | 'video_canceled' | 'normal';
   date: string;
   avater?: string;
-  accent?: string;
+  isDefaultAvatar?: boolean;
+  verifiedBadge?: boolean;
   icon: 'phone' | 'chevron';
-  subtitleTone?: 'normal' | 'muted' | 'danger' | 'emoji';
 };
 
 type ConversationItem =
@@ -81,150 +79,92 @@ type ConversationThread = {
   messages: ConversationItem[];
 };
 
-const stories: StoryItem[] = [
-  { id: 's1', name: 'Add a story', accent: '#37393D', plus: true },
-  { id: 's2', name: 'Almain - S...', accent: '#2D8ACB', badge: '1' },
-  { id: 's3', name: 'Planet', accent: '#8E9E59', badge: 'FOF' },
-  { id: 's4', name: 'Marketpla..', marketplace: true },
-];
-
 const reactionEmojis = ['😡', '😭', '😩', '🥲', '👻', '😞', '😘', '💕'];
 const reactionDiceSource: ImageSourcePropType = require('./assets/apk/reaction_first_icon.png');
 const senderAvatarSource: ImageSourcePropType = require('./assets/avater/sender_me_clean.png');
 
 const avatarSources: Record<string, ImageSourcePropType> = {
-  '../assets/avater/deepaknaik-soniya-bansal-8065649.jpg': require('./assets/avater/deepaknaik-soniya-bansal-8065649.jpg'),
-  '../assets/avater/ghostw1997-aodai-6004289.jpg': require('./assets/avater/ghostw1997-aodai-6004289.jpg'),
-  '../assets/avater/hiteshhtsharma-srishti-textile-9876622.jpg': require('./assets/avater/hiteshhtsharma-srishti-textile-9876622.jpg'),
-  '../assets/avater/rachealmarie-ai-generated-8626079_1920.jpg': require('./assets/avater/rachealmarie-ai-generated-8626079_1920.jpg'),
-  '../assets/avater/raheel9630-aditi-rao-hydari-1748439_1920.jpg': require('./assets/avater/raheel9630-aditi-rao-hydari-1748439_1920.jpg'),
-  '../assets/avater/raheel9630-priyanka-chopra-1748203_1920.jpg': require('./assets/avater/raheel9630-priyanka-chopra-1748203_1920.jpg'),
+  '../assets/avater/contact_musu_khala.png': require('./assets/avater/contact_musu_khala.png'),
+  '../assets/avater/contact_ronzu.png': require('./assets/avater/contact_ronzu.png'),
   '../assets/avater/jorna_avatar.png': require('./assets/avater/jorna_avatar.png'),
+  '../assets/avater/contact_makon.png': require('./assets/avater/contact_makon.png'),
+  '../assets/avater/contact_kamrul.png': require('./assets/avater/contact_kamrul.png'),
+  '../assets/avater/contact_sumaiya.png': require('./assets/avater/contact_sumaiya.png'),
   '../assets/avater/sender_me_clean.png': senderAvatarSource,
+  '../assets/avater/story_porosh.png': require('./assets/avater/story_porosh.png'),
+  '../assets/avater/story_planet.png': require('./assets/avater/story_planet.png'),
 };
 
-function CircleAvatar({
-  label,
-  accent,
-  size = 64,
-}: {
-  label: string;
-  accent: string;
-  size?: number;
-}) {
+const stories: StoryItem[] = [
+  { id: 's1', name: 'Story', plus: true },
+  { id: 's2', name: 'পরশ', image: require('./assets/avater/story_porosh.png') },
+  { id: 's3', name: 'Planet', image: require('./assets/avater/story_planet.png') },
+];
+
+/* SVG Icons for Start Screen */
+function TopBarChatIcon() {
   return (
-    <View
-      style={[
-        styles.avatar,
-        {
-          width: size,
-          height: size,
-          borderRadius: size / 2,
-          backgroundColor: accent,
-        },
-      ]}
-    >
-      <Text style={[styles.avatarText, size < 60 && styles.avatarTextSmall]}>
-        {label}
-      </Text>
-    </View>
-  );
-}
-
-function ContactAvatar({
-  contact,
-  size = 64,
-}: {
-  contact: ContactItem;
-  size?: number;
-}) {
-  const source = contact.avater ? avatarSources[contact.avater] : undefined;
-
-  if (source) {
-    return (
-      <Image
-        source={source}
-        style={[
-          styles.photoAvatar,
-          {
-            width: size,
-            height: size,
-            borderRadius: size / 2,
-          },
-        ]}
+    <Svg width={27} height={27} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M20 11.5C20 16.19 16.19 20 11.5 20C10.05 20 8.68 19.64 7.48 18.99L3 20.2L4.25 15.82C3.47 14.54 3 13.07 3 11.5C3 6.81 6.81 3 11.5 3C16.19 3 20 6.81 20 11.5Z"
+        fill="#00A3FF"
       />
-    );
-  }
-
-  return (
-    <CircleAvatar
-      label={contact.name.slice(0, 1)}
-      accent={contact.accent || '#5F6670'}
-      size={size}
-    />
+      <Path d="M7.5 10H15.5M7.5 13.5H12.5" stroke="#0E0F12" strokeWidth="1.9" strokeLinecap="round" />
+    </Svg>
   );
 }
 
-function StoryAvatar({ item }: { item: StoryItem }) {
-  if (item.plus) {
-    return (
-      <View style={styles.addStoryWrap}>
-        <View style={styles.addStoryCircle}>
-          <Camera color="#818890" width={24} height={24} strokeWidth={2.2} />
-        </View>
-        <View style={styles.plusBadge}>
-          <Plus color="#FFFFFF" size={16} strokeWidth={2.4} />
-        </View>
-      </View>
-    );
-  }
-
+function MissedCallIcon({ size = 15, color = '#FF5A52' }: { size?: number; color?: string }) {
   return (
-    <View style={styles.storyAvatarWrap}>
-      {item.marketplace ? (
-        <View style={styles.marketplaceRing}>
-          <View style={styles.marketplaceInner}>
-            <ChatBubble color="#0A9CFF" width={24} height={24} strokeWidth={2.2} />
-            <Text style={styles.marketplaceBottom}>imo</Text>
-          </View>
-        </View>
-      ) : (
-        <View style={[styles.storyRing, item.id === 's3' && styles.storyRingGreen]}>
-          <CircleAvatar label={item.name.slice(0, 1)} accent={item.accent || '#4B8ACB'} size={70} />
-        </View>
-      )}
-      {item.badge ? (
-        <View style={styles.storyBadge}>
-          <Text style={styles.storyBadgeText}>{item.badge}</Text>
-        </View>
-      ) : null}
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M16 4L7 13M7 13H12M7 13V8"
+        stroke={color}
+        strokeWidth="2.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <Path
+        d="M21 16.5v2.8a1.8 1.8 0 0 1-1.96 1.8 17.8 17.8 0 0 1-7.77-2.76 17.5 17.5 0 0 1-5.4-5.4A17.8 17.8 0 0 1 3.1 5.17 1.8 1.8 0 0 1 4.9 3.2h2.8a1.8 1.8 0 0 1 1.8 1.55 11.5 11.5 0 0 0 .63 2.53 1.8 1.8 0 0 1-.4 1.9L8.55 10.36a14.4 14.4 0 0 0 5.4 5.4l1.18-1.18a1.8 1.8 0 0 1 1.9-.4 11.5 11.5 0 0 0 2.53.63 1.8 1.8 0 0 1 1.44 1.69z"
+        stroke={color}
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
+function AudioSubtitleIcon({ size = 14, color = '#8E949B' }: { size?: number; color?: string }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Rect x="8" y="2" width="8" height="12" rx="4" stroke={color} strokeWidth="1.9" />
+      <Path d="M4 10C4 14.4 7.6 18 12 18C16.4 18 20 14.4 20 10" stroke={color} strokeWidth="1.9" strokeLinecap="round" />
+      <Path d="M12 18V22M8 22H16" stroke={color} strokeWidth="1.9" strokeLinecap="round" />
+    </Svg>
+  );
+}
+
+function VideoSubtitleIcon({ size = 15, color = '#8E949B' }: { size?: number; color?: string }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Rect x="2" y="5" width="13" height="14" rx="3" stroke={color} strokeWidth="1.9" />
+      <Path d="M15 10L21 6V18L15 14" stroke={color} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+
+function GreenCheckBadge() {
+  return (
+    <View style={styles.verifiedBadge}>
+      <Svg width={10} height={10} viewBox="0 0 24 24" fill="none">
+        <Path d="M5 13L9 17L19 7" stroke="#FFFFFF" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
+      </Svg>
     </View>
   );
 }
 
-function renderSubtitleTone(
-  tone: ContactItem['subtitleTone'],
-  subtitle: string
-) {
-  if (tone === 'emoji') {
-    return <Text style={styles.contactSubtitleEmoji}>♥</Text>;
-  }
-
-  return (
-    <Text
-      style={[
-        styles.contactSubtitle,
-        tone === 'muted' && styles.contactSubtitleMuted,
-        tone === 'danger' && styles.contactSubtitleDanger,
-      ]}
-      numberOfLines={1}
-    >
-      {subtitle}
-    </Text>
-  );
-}
-
-/* SVG Helpers for precise conversation matching */
+/* SVG Helpers for Conversation Screen */
 function VideoCallIcon({ size = 20, color = '#FFFFFF' }: { size?: number; color?: string }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
@@ -339,7 +279,7 @@ function MicIcon({ size = 22, color = '#FFFFFF' }: { size?: number; color?: stri
 }
 
 export default function App() {
-  const [activeContactId, setActiveContactId] = useState<string | null>('c3');
+  const [activeContactId, setActiveContactId] = useState<string | null>(null);
   const [messageInput, setMessageInput] = useState('');
 
   const activeContact = useMemo(
@@ -350,6 +290,79 @@ export default function App() {
     () => conversations.find((item) => item.contactId === activeContactId) ?? null,
     [activeContactId]
   );
+
+  /* Contact Subtitle Renderer matching imo_start.jpeg */
+  const renderSubtitle = (contact: ContactItem) => {
+    if (contact.subtitleType === 'missed_call') {
+      return (
+        <View style={styles.subtitleRow}>
+          <MissedCallIcon />
+          <Text style={styles.subtitleMissedText}>{contact.subtitle}</Text>
+        </View>
+      );
+    }
+
+    if (contact.subtitleType === 'emoji') {
+      return (
+        <View style={styles.subtitleRow}>
+          <Text style={styles.subtitleHeartText}>{contact.subtitle}</Text>
+        </View>
+      );
+    }
+
+    if (contact.subtitleType === 'audio') {
+      return (
+        <View style={styles.subtitleRow}>
+          <AudioSubtitleIcon />
+          <Text style={styles.subtitleMutedText}>{contact.subtitle}</Text>
+        </View>
+      );
+    }
+
+    if (contact.subtitleType === 'video_canceled') {
+      return (
+        <View style={styles.subtitleRow}>
+          <VideoSubtitleIcon />
+          <Text style={styles.subtitleMutedText}>{contact.subtitle}</Text>
+        </View>
+      );
+    }
+
+    return (
+      <View style={styles.subtitleRow}>
+        <Text style={styles.subtitleMutedText}>{contact.subtitle}</Text>
+      </View>
+    );
+  };
+
+  /* Contact Avatar with verified green check badge */
+  const renderContactAvatar = (contact: ContactItem) => {
+    if (contact.isDefaultAvatar) {
+      return (
+        <View style={styles.contactAvatarWrap}>
+          <View style={styles.defaultSilhouetteAvatar}>
+            <FontAwesome5 name="user" solid size={28} color="#8A8F98" />
+          </View>
+          {contact.verifiedBadge && <GreenCheckBadge />}
+        </View>
+      );
+    }
+
+    const source = contact.avater ? avatarSources[contact.avater] : undefined;
+
+    return (
+      <View style={styles.contactAvatarWrap}>
+        {source ? (
+          <Image source={source} style={styles.contactPhotoAvatar} />
+        ) : (
+          <View style={styles.defaultSilhouetteAvatar}>
+            <FontAwesome5 name="user" solid size={28} color="#8A8F98" />
+          </View>
+        )}
+        {contact.verifiedBadge && <GreenCheckBadge />}
+      </View>
+    );
+  };
 
   const renderConversation = () => {
     if (!activeContact) {
@@ -422,18 +435,16 @@ export default function App() {
                     mine ? styles.messageRowMine : styles.messageRowTheirs,
                   ]}
                 >
-                  {/* Left Avatar for incoming */}
                   {!mine && (
                     <View style={styles.avatarColumn}>
                       {showAvatar ? (
-                        <ContactAvatar contact={activeContact} size={36} />
+                        <Image source={avatarSources[activeContact.avater ?? '']} style={styles.senderAvatarImg} />
                       ) : (
                         <View style={styles.avatarPlaceholder} />
                       )}
                     </View>
                   )}
 
-                  {/* Call Bubble */}
                   <View style={styles.bubbleWrapper}>
                     {showAvatar && (mine ? <BubbleTailMine color="#035587" /> : <BubbleTailTheirs color="#282A2F" />)}
 
@@ -489,7 +500,6 @@ export default function App() {
                     </View>
                   </View>
 
-                  {/* Right Avatar for outgoing */}
                   {mine && (
                     <View style={styles.avatarColumn}>
                       {showAvatar ? (
@@ -515,7 +525,7 @@ export default function App() {
                   {!mine && (
                     <View style={styles.avatarColumn}>
                       {showAvatar ? (
-                        <ContactAvatar contact={activeContact} size={36} />
+                        <Image source={avatarSources[activeContact.avater ?? '']} style={styles.senderAvatarImg} />
                       ) : (
                         <View style={styles.avatarPlaceholder} />
                       )}
@@ -617,42 +627,40 @@ export default function App() {
     );
   };
 
-  const renderContacts = () => (
+  const renderStartScreen = () => (
     <>
+      {/* Top Bar - 1:1 matching imo_start.jpeg */}
       <View style={styles.topBar}>
-        <CircleAvatar label="S" accent="#BDEBDD" size={46} />
+        <TouchableOpacity activeOpacity={0.8}>
+          <Image source={senderAvatarSource} style={styles.topBarUserAvatar} />
+        </TouchableOpacity>
 
-        <View style={styles.centerIconWrap}>
-          <View style={styles.centerIconBubble}>
-            <ChatLines color="#0A9CFF" width={26} height={26} strokeWidth={2.4} />
-          </View>
+        {/* Center Tab (Chats Tab) */}
+        <View style={styles.topBarCenterTab}>
+          <TopBarChatIcon />
+          <View style={styles.tabIndicatorBar} />
         </View>
 
-        <TouchableOpacity activeOpacity={0.8} style={styles.menuWrap}>
-          <View style={styles.headerMenuIcon}>
-            <FontAwesome5
-              name="user-alt"
-              size={25}
-              color="#C5CCD3"
-              style={styles.headerMenuUser}
-            />
-            <View style={styles.headerMenuList}>
-              <View style={styles.headerMenuLine} />
-              <View style={styles.headerMenuLine} />
-              <View style={styles.headerMenuLine} />
+        {/* Right Menu Button with Green "1" Badge */}
+        <TouchableOpacity activeOpacity={0.8} style={styles.topRightBtn}>
+          <View style={styles.topRightUserWrap}>
+            <FontAwesome5 name="user-alt" size={20} color="#B0B6BD" />
+            <View style={styles.topRightLines}>
+              <View style={styles.topRightLine} />
+              <View style={styles.topRightLine} />
             </View>
           </View>
+          <View style={styles.topRightBadge}>
+            <Text style={styles.topRightBadgeText}>1</Text>
+          </View>
         </TouchableOpacity>
-      </View>
-
-      <View style={styles.tabTrack}>
-        <View style={styles.tabIndicator} />
       </View>
 
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
+        {/* Stories Row - 1:1 matching imo_start.jpeg (Story, পরশ, Planet) */}
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -660,7 +668,20 @@ export default function App() {
         >
           {stories.map((item) => (
             <View key={item.id} style={styles.storyItem}>
-              <StoryAvatar item={item} />
+              {item.plus ? (
+                <View style={styles.storyAddWrap}>
+                  <View style={styles.storyAddCircle}>
+                    <FontAwesome5 name="camera" size={24} color="#C4CAD1" />
+                  </View>
+                  <View style={styles.storyPlusBadge}>
+                    <Plus color="#FFFFFF" size={16} strokeWidth={3} />
+                  </View>
+                </View>
+              ) : (
+                <View style={styles.storyImageWrap}>
+                  <Image source={item.image!} style={styles.storyImg} />
+                </View>
+              )}
               <Text style={styles.storyLabel} numberOfLines={1}>
                 {item.name}
               </Text>
@@ -668,48 +689,42 @@ export default function App() {
           ))}
         </ScrollView>
 
-        <View style={styles.divider} />
+        <View style={styles.listSeparator} />
 
+        {/* Contacts / Chat List - EXACT items matching imo_start.jpeg */}
         {contacts.map((item) => (
           <TouchableOpacity
             key={item.id}
             style={styles.contactRow}
-            activeOpacity={0.82}
+            activeOpacity={0.7}
             onPress={() => setActiveContactId(item.id)}
           >
-            {item.name === 'imo Team' ? (
-              <View style={styles.teamAvatar}>
-                <Text style={styles.teamAvatarText}>imo</Text>
-              </View>
-            ) : (
-              <ContactAvatar contact={item} size={62} />
-            )}
+            {renderContactAvatar(item)}
 
             <View style={styles.contactBody}>
               <Text style={styles.contactName} numberOfLines={1}>
                 {item.name}
               </Text>
-              {renderSubtitleTone(item.subtitleTone, item.subtitle)}
+              {renderSubtitle(item)}
             </View>
 
             <View style={styles.contactMeta}>
               <Text style={styles.contactDate}>{item.date}</Text>
-              {item.icon === 'chevron' ? (
-                <NavArrowRight color="#727780" width={18} height={18} strokeWidth={2.2} />
-              ) : (
-                <FontAwesome5 name="phone-alt" size={18} color="#00A0FF" solid />
-              )}
+              <TouchableOpacity activeOpacity={0.7} style={styles.callIconBtn}>
+                <FontAwesome5 name="phone-alt" size={17} color="#00A3FF" />
+              </TouchableOpacity>
             </View>
           </TouchableOpacity>
         ))}
       </ScrollView>
 
+      {/* Bottom Floating Action Bar */}
       <View style={styles.bottomBar}>
-        <TouchableOpacity activeOpacity={0.8}>
-          <Plus color="#00A0FF" size={34} strokeWidth={2.1} />
+        <TouchableOpacity activeOpacity={0.8} style={styles.bottomActionBtn}>
+          <Plus color="#00A3FF" size={30} strokeWidth={2.4} />
         </TouchableOpacity>
-        <TouchableOpacity activeOpacity={0.8}>
-          <Search color="#00A0FF" size={28} strokeWidth={2.2} />
+        <TouchableOpacity activeOpacity={0.8} style={styles.bottomActionBtn}>
+          <Search color="#00A3FF" size={26} strokeWidth={2.4} />
         </TouchableOpacity>
       </View>
     </>
@@ -719,7 +734,7 @@ export default function App() {
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="light-content" backgroundColor="#16171B" />
       <View style={styles.screen}>
-        {activeContactId ? renderConversation() : renderContacts()}
+        {activeContactId ? renderConversation() : renderStartScreen()}
       </View>
     </SafeAreaView>
   );
@@ -739,7 +754,241 @@ const styles = StyleSheet.create({
     backgroundColor: '#0E0F12',
   },
 
-  /* Conversation Header */
+  /* Start Screen Top Bar */
+  topBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight ?? 0) + 6 : 10,
+    paddingBottom: 4,
+    backgroundColor: '#16171B',
+  },
+  topBarUserAvatar: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+  },
+  topBarCenterTab: {
+    alignItems: 'center',
+    flex: 1,
+    paddingTop: 4,
+  },
+  tabIndicatorBar: {
+    width: 140,
+    height: 3,
+    backgroundColor: '#00A3FF',
+    marginTop: 8,
+    borderRadius: 1.5,
+  },
+  topRightBtn: {
+    width: 44,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  topRightUserWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  topRightLines: {
+    marginLeft: 3,
+    gap: 3,
+  },
+  topRightLine: {
+    width: 5,
+    height: 2,
+    backgroundColor: '#B0B6BD',
+    borderRadius: 1,
+  },
+  topRightBadge: {
+    position: 'absolute',
+    top: 0,
+    right: 2,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: '#4CD964',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: '#16171B',
+  },
+  topRightBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '800',
+  },
+
+  /* Story Carousel */
+  scrollContent: {
+    paddingBottom: 76,
+  },
+  storyRow: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 16,
+  },
+  storyItem: {
+    width: 86,
+    marginRight: 10,
+    alignItems: 'center',
+  },
+  storyAddWrap: {
+    width: 72,
+    height: 72,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  storyAddCircle: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: '#26282E',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  storyPlusBadge: {
+    position: 'absolute',
+    right: 0,
+    bottom: 2,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#00A3FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2.5,
+    borderColor: '#0E0F12',
+  },
+  storyImageWrap: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    overflow: 'hidden',
+  },
+  storyImg: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+  },
+  storyLabel: {
+    marginTop: 8,
+    color: '#E4E7EB',
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  listSeparator: {
+    height: 1,
+    backgroundColor: '#1E2026',
+  },
+
+  /* Contact List Rows */
+  contactRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#17181D',
+  },
+  contactAvatarWrap: {
+    position: 'relative',
+    width: 58,
+    height: 58,
+  },
+  contactPhotoAvatar: {
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+  },
+  defaultSilhouetteAvatar: {
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    backgroundColor: '#444851',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  verifiedBadge: {
+    position: 'absolute',
+    right: -1,
+    bottom: -1,
+    width: 19,
+    height: 19,
+    borderRadius: 9.5,
+    backgroundColor: '#3DD448',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#0E0F12',
+  },
+  contactBody: {
+    flex: 1,
+    marginLeft: 15,
+    marginRight: 10,
+    justifyContent: 'center',
+  },
+  contactName: {
+    color: '#FFFFFF',
+    fontSize: 16.5,
+    fontWeight: '600',
+    letterSpacing: -0.2,
+  },
+  subtitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+    gap: 5,
+  },
+  subtitleMissedText: {
+    color: '#FF5A52',
+    fontSize: 13,
+    fontWeight: '400',
+  },
+  subtitleHeartText: {
+    fontSize: 13,
+    lineHeight: 16,
+  },
+  subtitleMutedText: {
+    color: '#8E949B',
+    fontSize: 13,
+    fontWeight: '400',
+  },
+  contactMeta: {
+    width: 60,
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    height: 46,
+  },
+  contactDate: {
+    color: '#8E949B',
+    fontSize: 11.5,
+    fontWeight: '400',
+  },
+  callIconBtn: {
+    padding: 2,
+  },
+
+  /* Bottom Floating Action Bar */
+  bottomBar: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: 58,
+    backgroundColor: '#0E0F12',
+    paddingHorizontal: 28,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  bottomActionBtn: {
+    padding: 8,
+  },
+
+  /* Conversation Screen Styles */
   chatHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -781,8 +1030,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-
-  /* Conversation Messages List */
   chatScroll: {
     flex: 1,
     backgroundColor: '#0E0F12',
@@ -792,8 +1039,6 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     paddingBottom: 14,
   },
-
-  /* Date Badges */
   dateBadgeWrap: {
     alignItems: 'center',
     marginVertical: 12,
@@ -809,8 +1054,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '500',
   },
-
-  /* Rows & Avatars */
   messageRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -839,8 +1082,6 @@ const styles = StyleSheet.create({
     position: 'relative',
     marginHorizontal: 8,
   },
-
-  /* Bubble Tails */
   tailMinePosition: {
     position: 'absolute',
     top: 0,
@@ -853,8 +1094,6 @@ const styles = StyleSheet.create({
     left: -7,
     zIndex: 2,
   },
-
-  /* Call Cards */
   callCard: {
     width: 275,
     paddingHorizontal: 15,
@@ -940,8 +1179,6 @@ const styles = StyleSheet.create({
     borderColor: '#00A3FF',
     marginLeft: 5,
   },
-
-  /* Text Bubbles */
   textBubble: {
     paddingHorizontal: 16,
     paddingTop: 10,
@@ -982,8 +1219,6 @@ const styles = StyleSheet.create({
   messageTime: {
     fontSize: 11,
   },
-
-  /* Reactions Bar */
   reactionBar: {
     backgroundColor: '#111215',
     flexDirection: 'row',
@@ -1008,8 +1243,6 @@ const styles = StyleSheet.create({
     fontSize: 19,
     textAlign: 'center',
   },
-
-  /* Composer Bar */
   composerBar: {
     backgroundColor: '#111215',
     flexDirection: 'row',
@@ -1055,271 +1288,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: 10,
-  },
-
-  /* Contacts & Main Screen Styles */
-  topBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 18,
-    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight ?? 0) + 6 : 10,
-    paddingBottom: 12,
-    backgroundColor: '#16171B',
-  },
-  centerIconWrap: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  centerIconBubble: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  menuWrap: {
-    width: 46,
-    height: 46,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerMenuIcon: {
-    width: 38,
-    height: 30,
-    position: 'relative',
-  },
-  headerMenuUser: {
-    position: 'absolute',
-    left: 0,
-    top: 1,
-  },
-  headerMenuList: {
-    position: 'absolute',
-    right: 0,
-    top: 7,
-    justifyContent: 'center',
-    gap: 3,
-  },
-  headerMenuLine: {
-    width: 7,
-    height: 2,
-    borderRadius: 2,
-    backgroundColor: '#C5CCD3',
-  },
-  tabTrack: {
-    height: 3,
-    backgroundColor: '#303238',
-  },
-  tabIndicator: {
-    width: 170,
-    height: 3,
-    marginLeft: 122,
-    backgroundColor: '#0A9CFF',
-  },
-  scrollContent: {
-    paddingBottom: 88,
-  },
-  storyRow: {
-    paddingHorizontal: 16,
-    paddingTop: 20,
-    paddingBottom: 18,
-  },
-  storyItem: {
-    width: 92,
-    marginRight: 8,
-    alignItems: 'center',
-  },
-  addStoryWrap: {
-    width: 78,
-    height: 78,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  addStoryCircle: {
-    width: 78,
-    height: 78,
-    borderRadius: 39,
-    backgroundColor: '#303238',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  plusBadge: {
-    position: 'absolute',
-    right: 0,
-    bottom: 4,
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    backgroundColor: '#0A9CFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 3,
-    borderColor: '#1E1F23',
-  },
-  storyAvatarWrap: {
-    width: 78,
-    height: 78,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  storyRing: {
-    width: 78,
-    height: 78,
-    borderRadius: 39,
-    borderWidth: 3,
-    borderColor: '#17A8FF',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  storyRingGreen: {
-    borderColor: '#6FC44B',
-  },
-  marketplaceRing: {
-    width: 78,
-    height: 78,
-    borderRadius: 39,
-    borderWidth: 3,
-    borderColor: '#17A8FF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#F3F5F7',
-  },
-  marketplaceInner: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#F4F7FA',
-  },
-  marketplaceBottom: {
-    marginTop: 1,
-    color: '#0A9CFF',
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  storyBadge: {
-    position: 'absolute',
-    top: 0,
-    right: -2,
-    minWidth: 30,
-    height: 30,
-    borderRadius: 15,
-    paddingHorizontal: 6,
-    backgroundColor: '#61D34C',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: '#1E1F23',
-  },
-  storyBadgeText: {
-    color: '#FFFFFF',
-    fontSize: 10,
-    fontWeight: '800',
-  },
-  storyLabel: {
-    marginTop: 10,
-    color: '#F1F3F5',
-    fontSize: 12,
-    fontWeight: '500',
-    maxWidth: 96,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: '#32343A',
-  },
-  contactRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#32343A',
-  },
-  contactBody: {
-    flex: 1,
-    marginLeft: 16,
-    marginRight: 10,
-  },
-  contactName: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '500',
-    letterSpacing: -0.2,
-  },
-  contactSubtitle: {
-    marginTop: 4,
-    color: '#AAB0B7',
-    fontSize: 11,
-    fontWeight: '400',
-  },
-  contactSubtitleMuted: {
-    color: '#9CA2AA',
-  },
-  contactSubtitleDanger: {
-    color: '#FF5A52',
-  },
-  contactSubtitleEmoji: {
-    marginTop: 4,
-    color: '#FF4D4D',
-    fontSize: 16,
-    lineHeight: 18,
-  },
-  contactMeta: {
-    width: 72,
-    alignItems: 'flex-end',
-    justifyContent: 'center',
-  },
-  contactDate: {
-    color: '#A8ADB4',
-    fontSize: 10,
-    fontWeight: '400',
-    marginBottom: 10,
-  },
-  bottomBar: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    height: 72,
-    backgroundColor: '#16171B',
-    borderTopWidth: 1,
-    borderTopColor: '#32343A',
-    paddingHorizontal: 30,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  avatar: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-  },
-  photoAvatar: {
-    backgroundColor: '#303238',
-  },
-  teamAvatar: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E4E7EA',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  teamAvatarText: {
-    color: '#12A2FF',
-    fontSize: 22,
-    fontWeight: '700',
-  },
-  avatarText: {
-    color: '#FFFFFF',
-    fontSize: 22,
-    fontWeight: '700',
-  },
-  avatarTextSmall: {
-    fontSize: 18,
   },
 });

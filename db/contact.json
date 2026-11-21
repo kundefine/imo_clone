@@ -2,90 +2,75 @@
   {
     "id": "c1",
     "name": "Musu Khala Bl",
-    "subtitle": "Audio call",
-    "date": "Feb 11",
-    "avater": "../assets/avater/deepaknaik-soniya-bansal-8065649.jpg",
-    "accent": "#9C7E84",
-    "icon": "phone",
-    "subtitleTone": "muted"
+    "subtitle": "Missed Audio Call",
+    "subtitleType": "missed_call",
+    "date": "Tue",
+    "avater": "../assets/avater/contact_musu_khala.png",
+    "icon": "phone"
   },
   {
     "id": "c2",
-    "name": "imo Team",
-    "subtitle": "Add Login Email You'll receive login veri...",
-    "date": "Oct 2025",
-    "avater": "../assets/avater/ghostw1997-aodai-6004289.jpg",
-    "icon": "chevron",
-    "subtitleTone": "muted"
+    "name": "Ronzu",
+    "subtitle": "❤️",
+    "subtitleType": "emoji",
+    "date": "Sep 3",
+    "avater": "../assets/avater/contact_ronzu.png",
+    "icon": "phone"
+  },
+  {
+    "id": "c4",
+    "name": "Chamili Apu",
+    "subtitle": "Audio",
+    "subtitleType": "audio",
+    "date": "Aug 14",
+    "isDefaultAvatar": true,
+    "icon": "phone"
   },
   {
     "id": "c3",
     "name": "Jorna",
     "subtitle": "Canceled",
-    "date": "Aug 2025",
+    "subtitleType": "video_canceled",
+    "date": "Apr 29",
     "avater": "../assets/avater/jorna_avatar.png",
-    "accent": "#7FA59A",
-    "icon": "phone",
-    "subtitleTone": "muted"
-  },
-  {
-    "id": "c4",
-    "name": "Chamily Bhagne",
-    "subtitle": "+880 1930-932309",
-    "date": "Jul 2025",
-    "avater": "../assets/avater/rachealmarie-ai-generated-8626079_1920.jpg",
-    "accent": "#585F67",
-    "icon": "phone",
-    "subtitleTone": "normal"
+    "icon": "phone"
   },
   {
     "id": "c5",
     "name": "Ammu",
     "subtitle": "Canceled",
+    "subtitleType": "video_canceled",
     "date": "Jul 2025",
-    "avater": "../assets/avater/raheel9630-aditi-rao-hydari-1748439_1920.jpg",
-    "accent": "#6F6A78",
-    "icon": "phone",
-    "subtitleTone": "normal"
+    "isDefaultAvatar": true,
+    "icon": "phone"
   },
   {
     "id": "c6",
     "name": "Makon bl new",
     "subtitle": "Missed Audio Call",
+    "subtitleType": "missed_call",
     "date": "Jul 2025",
-    "avater": "../assets/avater/raheel9630-priyanka-chopra-1748203_1920.jpg",
-    "accent": "#88A95F",
-    "icon": "phone",
-    "subtitleTone": "danger"
+    "avater": "../assets/avater/contact_makon.png",
+    "verifiedBadge": true,
+    "icon": "phone"
   },
   {
     "id": "c7",
     "name": "MD.Kamrul Islam",
-    "subtitle": "Heart",
+    "subtitle": "❤️",
+    "subtitleType": "emoji",
     "date": "Jul 2025",
-    "avater": "../assets/avater/deepaknaik-soniya-bansal-8065649.jpg",
-    "accent": "#679782",
-    "icon": "phone",
-    "subtitleTone": "emoji"
+    "avater": "../assets/avater/contact_kamrul.png",
+    "verifiedBadge": true,
+    "icon": "phone"
   },
   {
     "id": "c8",
     "name": "Sumaiya Apu",
-    "subtitle": "Heart",
+    "subtitle": "❤️",
+    "subtitleType": "emoji",
     "date": "Jul 2025",
-    "avater": "../assets/avater/ghostw1997-aodai-6004289.jpg",
-    "accent": "#BA526C",
-    "icon": "phone",
-    "subtitleTone": "emoji"
-  },
-  {
-    "id": "c9",
-    "name": "Mahnuda",
-    "subtitle": "Heart",
-    "date": "Jul 2025",
-    "avater": "../assets/avater/deepaknaik-soniya-bansal-8065649.jpg",
-    "accent": "#BA526C",
-    "icon": "phone",
-    "subtitleTone": "emoji"
+    "avater": "../assets/avater/contact_sumaiya.png",
+    "icon": "phone"
   }
 ]

@@ -1,9 +1,14 @@
 import { FontAwesome5 } from '@expo/vector-icons';
-import { ArrowLeft, MoreVertical, Plus, Search } from 'lucide-react-native';
-import { useMemo, useState } from 'react';
+import * as Contacts from 'expo-contacts';
+import { ArrowLeft, Check, MoreVertical, Plus, Search, UserPlus, X } from 'lucide-react-native';
+import { useEffect, useMemo, useState } from 'react';
 import {
+  ActivityIndicator,
+  Alert,
+  FlatList,
   Image,
   ImageSourcePropType,
+  Modal,
   Platform,
   SafeAreaView,
   ScrollView,
@@ -16,8 +21,8 @@ import {
 } from 'react-native';
 import Svg, { Circle, Path, Rect } from 'react-native-svg';
 
-const contacts = require('./db/contact.json') as ContactItem[];
-const conversations = require('./db/conversations.json') as ConversationThread[];
+const initialContacts = require('./db/contact.json') as ContactItem[];
+const initialConversations = require('./db/conversations.json') as ConversationThread[];
 
 type StoryItem = {
   id: string;
@@ -33,45 +38,53 @@ type ContactItem = {
   subtitleType?: 'missed_call' | 'emoji' | 'audio' | 'video_canceled' | 'normal';
   date: string;
   avater?: string;
+  imageUri?: string;
   isDefaultAvatar?: boolean;
   verifiedBadge?: boolean;
   icon: 'phone' | 'chevron';
 };
 
+type DeviceContactItem = {
+  id: string;
+  name: string;
+  phone?: string;
+  imageUri?: string;
+};
+
 type ConversationItem =
   | {
-      id: string;
-      type: 'date';
-      label: string;
-    }
+    id: string;
+    type: 'date';
+    label: string;
+  }
   | {
-      id: string;
-      type: 'text';
-      sender: 'me' | 'them';
-      text: string;
-      time: string;
-      isPhone?: boolean;
-      showAvatar?: boolean;
-    }
+    id: string;
+    type: 'text';
+    sender: 'me' | 'them';
+    text: string;
+    time: string;
+    isPhone?: boolean;
+    showAvatar?: boolean;
+  }
   | {
-      id: string;
-      type: 'image';
-      sender: 'me' | 'them';
-      time: string;
-      caption: string;
-      imageTone: 'paper' | 'portrait';
-      showAvatar?: boolean;
-    }
+    id: string;
+    type: 'image';
+    sender: 'me' | 'them';
+    time: string;
+    caption: string;
+    imageTone: 'paper' | 'portrait';
+    showAvatar?: boolean;
+  }
   | {
-      id: string;
-      type: 'call';
-      sender: 'me' | 'them';
-      title: string;
-      subtitle: string;
-      time: string;
-      callTone: 'missed' | 'done' | 'video' | 'canceled';
-      showAvatar?: boolean;
-    };
+    id: string;
+    type: 'call';
+    sender: 'me' | 'them';
+    title: string;
+    subtitle: string;
+    time: string;
+    callTone: 'missed' | 'done' | 'video' | 'canceled';
+    showAvatar?: boolean;
+  };
 
 type ConversationThread = {
   contactId: string;
@@ -278,18 +291,203 @@ function MicIcon({ size = 22, color = '#FFFFFF' }: { size?: number; color?: stri
   );
 }
 
+/* Sample device contacts for testing lazy-loading */
+function getFallbackRawDeviceContacts(): any[] {
+  const names = [
+    'Abdur Rahim', 'Babul Akter', 'Chowdhury Hasan', 'Dilara Begum',
+    'Enamul Haque', 'Faisal Karim', 'Golam Rabbani', 'Habibullah Misbah',
+    'Ismail Hossain', 'Jahangir Alam', 'Kazi Nazrul', 'Liton Das',
+    'Mahmudullah Riyad', 'Nasir Hossain', 'Omar Faruk', 'Parvez Emon',
+    'Quazi Motahar', 'Rafiqul Islam', 'Shakib Khan', 'Tamim Iqbal',
+    'Upoma Sen', 'Wahiduzzaman', 'Yeasin Arafat', 'Zakir Hasan',
+    'Anika Tabassum', 'Biplob Kumar', 'Dipu Moni', 'Emon Mahmud',
+    'Faruk Ahmed', 'Gazi Salahuddin', 'Hasan Mahmud', 'Iqbal Bahar'
+  ];
+
+  return names.map((name, i) => ({
+    id: `dev-fb-${i + 1}`,
+    name,
+    phoneNumbers: [{ number: `+880 17${10 + i}-${100000 + i * 37}` }],
+  }));
+}
+
 export default function App() {
+  const [contactsList, setContactsList] = useState<ContactItem[]>(initialContacts);
+  const [importedContacts, setImportedContacts] = useState<ContactItem[]>([]);
+  const [loadedImportedCount, setLoadedImportedCount] = useState(20);
+  const [isLoadingContacts, setIsLoadingContacts] = useState(false);
+
+  const [conversationsList, setConversationsList] = useState<ConversationThread[]>(initialConversations);
   const [activeContactId, setActiveContactId] = useState<string | null>(null);
   const [messageInput, setMessageInput] = useState('');
 
+  /* Manual Contact Creation Modal State */
+  const [isImportModalVisible, setIsImportModalVisible] = useState(false);
+  const [manualName, setManualName] = useState('');
+  const [manualPhone, setManualPhone] = useState('');
+  const [showManualForm, setShowManualForm] = useState(false);
+  const [contactSearchText, setContactSearchText] = useState('');
+
+  /* Automatic Single-Time Permission & Contact Import on App Launch */
+  useEffect(() => {
+    let isMounted = true;
+
+    async function autoImport() {
+      try {
+        setIsLoadingContacts(true);
+        // Request contact permission automatically on first launch
+        const { status } = await Contacts.requestPermissionsAsync();
+
+        if (status === 'granted') {
+          const { data } = await Contacts.getContactsAsync({
+            fields: [
+              Contacts.Fields.Name,
+              Contacts.Fields.PhoneNumbers,
+              Contacts.Fields.Image,
+            ],
+            sort: Contacts.SortTypes.FirstName,
+          });
+
+          if (isMounted) {
+            const raw = (data && data.length > 0) ? (data as any[]) : getFallbackRawDeviceContacts();
+            const mapped: ContactItem[] = raw.map((c, idx) => {
+              const name =
+                c.name ||
+                [c.firstName, c.lastName].filter(Boolean).join(' ') ||
+                `Contact ${idx + 1}`;
+              const phone = c.phoneNumbers?.[0]?.number || '+880 1700-000000';
+              const hasImage = !!((c.imageAvailable && c.image?.uri) || c.imageUri);
+              const imageUri = (c.imageAvailable && c.image?.uri) || c.imageUri || undefined;
+
+              return {
+                id: `device-${c.id || idx}`,
+                name,
+                subtitle: phone,
+                subtitleType: 'normal',
+                date: '',
+                imageUri,
+                isDefaultAvatar: !hasImage,
+                icon: 'phone',
+              };
+            });
+
+            setImportedContacts(mapped);
+          }
+        } else {
+          // If permission not granted, populate fallback list so user still sees default avatar contacts
+          if (isMounted) {
+            const fallbackMapped: ContactItem[] = getFallbackRawDeviceContacts().map((c, idx) => ({
+              id: `device-${c.id || idx}`,
+              name: c.name,
+              subtitle: c.phoneNumbers?.[0]?.number || '+880 1700-000000',
+              subtitleType: 'normal',
+              date: '',
+              isDefaultAvatar: true,
+              icon: 'phone',
+            }));
+            setImportedContacts(fallbackMapped);
+          }
+        }
+      } catch (err) {
+        console.warn('Auto import contacts error:', err);
+        if (isMounted) {
+          const fallbackMapped: ContactItem[] = getFallbackRawDeviceContacts().map((c, idx) => ({
+            id: `device-${c.id || idx}`,
+            name: c.name,
+            subtitle: c.phoneNumbers?.[0]?.number || '+880 1700-000000',
+            subtitleType: 'normal',
+            date: '',
+            isDefaultAvatar: true,
+            icon: 'phone',
+          }));
+          setImportedContacts(fallbackMapped);
+        }
+      } finally {
+        if (isMounted) setIsLoadingContacts(false);
+      }
+    }
+
+    autoImport();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  /* Combine all contacts for search and conversation navigation */
+  const allContacts = useMemo(
+    () => [...contactsList, ...importedContacts],
+    [contactsList, importedContacts]
+  );
+
+  /* Display contacts: Initial contacts at TOP, imported device contacts at BOTTOM (Lazy loaded first 20, +20 on scroll) */
+  const displayedContacts = useMemo(() => {
+    const visibleImported = importedContacts.slice(0, loadedImportedCount);
+    return [...contactsList, ...visibleImported];
+  }, [contactsList, importedContacts, loadedImportedCount]);
+
+  const hasMoreToLoad = importedContacts.length > loadedImportedCount;
+
+  /* Lazy Load on Scroll */
+  const handleLoadMoreContacts = () => {
+    if (hasMoreToLoad) {
+      setLoadedImportedCount((prev) => Math.min(prev + 20, importedContacts.length));
+    }
+  };
+
   const activeContact = useMemo(
-    () => contacts.find((item) => item.id === activeContactId) ?? null,
-    [activeContactId]
+    () => allContacts.find((item) => item.id === activeContactId) ?? null,
+    [allContacts, activeContactId]
   );
-  const activeConversation = useMemo(
-    () => conversations.find((item) => item.contactId === activeContactId) ?? null,
-    [activeContactId]
-  );
+
+  const activeConversation = useMemo(() => {
+    const existing = conversationsList.find((item) => item.contactId === activeContactId);
+    if (existing) return existing;
+    if (activeContact) {
+      return {
+        contactId: activeContact.id,
+        lastSeen: 'Last seen recently',
+        messages: [],
+      };
+    }
+    return null;
+  }, [conversationsList, activeContactId, activeContact]);
+
+  /* Manual Add Contact */
+  const handleAddManualContact = () => {
+    if (!manualName.trim()) {
+      Alert.alert('Name Required', 'Please enter a contact name.');
+      return;
+    }
+
+    const newContact: ContactItem = {
+      id: `c-${Date.now()}`,
+      name: manualName.trim(),
+      subtitle: manualPhone.trim() || 'imo Friend',
+      subtitleType: 'normal',
+      date: 'Just now',
+      isDefaultAvatar: true,
+      icon: 'phone',
+    };
+
+    setContactsList((prev) => [...prev, newContact]);
+
+    setManualName('');
+    setManualPhone('');
+    setShowManualForm(false);
+    setIsImportModalVisible(false);
+    Alert.alert('Contact Added', `${newContact.name} has been added with default avatar.`);
+  };
+
+  /* Filter Device Contacts for manual modal picker */
+  const filteredDeviceContacts = useMemo(() => {
+    if (!contactSearchText.trim()) return importedContacts;
+    const q = contactSearchText.toLowerCase();
+    return importedContacts.filter((c) => {
+      const name = c.name.toLowerCase();
+      const phone = c.subtitle.toLowerCase();
+      return name.includes(q) || phone.includes(q);
+    });
+  }, [importedContacts, contactSearchText]);
 
   /* Contact Subtitle Renderer matching imo_start.jpeg */
   const renderSubtitle = (contact: ContactItem) => {
@@ -335,13 +533,30 @@ export default function App() {
     );
   };
 
-  /* Contact Avatar with verified green check badge */
-  const renderContactAvatar = (contact: ContactItem) => {
-    if (contact.isDefaultAvatar) {
+  /* Contact Avatar with default avatar fallback & verified badge */
+  const renderContactAvatar = (contact: ContactItem, size: number = 58) => {
+    if (contact.imageUri) {
       return (
-        <View style={styles.contactAvatarWrap}>
-          <View style={styles.defaultSilhouetteAvatar}>
-            <FontAwesome5 name="user" solid size={28} color="#8A8F98" />
+        <View style={[styles.contactAvatarWrap, { width: size, height: size }]}>
+          <Image
+            source={{ uri: contact.imageUri }}
+            style={[styles.contactPhotoAvatar, { width: size, height: size, borderRadius: size / 2 }]}
+          />
+          {contact.verifiedBadge && <GreenCheckBadge />}
+        </View>
+      );
+    }
+
+    if (contact.isDefaultAvatar || !contact.avater) {
+      return (
+        <View style={[styles.contactAvatarWrap, { width: size, height: size }]}>
+          <View
+            style={[
+              styles.defaultSilhouetteAvatar,
+              { width: size, height: size, borderRadius: size / 2 },
+            ]}
+          >
+            <FontAwesome5 name="user" solid size={Math.round(size * 0.48)} color="#8A8F98" />
           </View>
           {contact.verifiedBadge && <GreenCheckBadge />}
         </View>
@@ -351,12 +566,20 @@ export default function App() {
     const source = contact.avater ? avatarSources[contact.avater] : undefined;
 
     return (
-      <View style={styles.contactAvatarWrap}>
+      <View style={[styles.contactAvatarWrap, { width: size, height: size }]}>
         {source ? (
-          <Image source={source} style={styles.contactPhotoAvatar} />
+          <Image
+            source={source}
+            style={[styles.contactPhotoAvatar, { width: size, height: size, borderRadius: size / 2 }]}
+          />
         ) : (
-          <View style={styles.defaultSilhouetteAvatar}>
-            <FontAwesome5 name="user" solid size={28} color="#8A8F98" />
+          <View
+            style={[
+              styles.defaultSilhouetteAvatar,
+              { width: size, height: size, borderRadius: size / 2 },
+            ]}
+          >
+            <FontAwesome5 name="user" solid size={Math.round(size * 0.48)} color="#8A8F98" />
           </View>
         )}
         {contact.verifiedBadge && <GreenCheckBadge />}
@@ -412,174 +635,185 @@ export default function App() {
           contentContainerStyle={styles.chatScrollContent}
           showsVerticalScrollIndicator={false}
         >
-          {messages.map((item) => {
-            if (item.type === 'date') {
-              return (
-                <View key={item.id} style={styles.dateBadgeWrap}>
-                  <View style={styles.dateBadge}>
-                    <Text style={styles.dateBadgeText}>{item.label}</Text>
-                  </View>
-                </View>
-              );
-            }
-
-            const mine = item.sender === 'me';
-            const showAvatar = item.showAvatar !== false;
-
-            if (item.type === 'call') {
-              return (
-                <View
-                  key={item.id}
-                  style={[
-                    styles.messageRow,
-                    mine ? styles.messageRowMine : styles.messageRowTheirs,
-                  ]}
-                >
-                  {!mine && (
-                    <View style={styles.avatarColumn}>
-                      {showAvatar ? (
-                        <Image source={avatarSources[activeContact.avater ?? '']} style={styles.senderAvatarImg} />
-                      ) : (
-                        <View style={styles.avatarPlaceholder} />
-                      )}
-                    </View>
-                  )}
-
-                  <View style={styles.bubbleWrapper}>
-                    {showAvatar && (mine ? <BubbleTailMine color="#035587" /> : <BubbleTailTheirs color="#282A2F" />)}
-
-                    <View
-                      style={[
-                        styles.callCard,
-                        mine ? styles.callCardMine : styles.callCardTheirs,
-                        !showAvatar && (mine ? styles.bubbleNoTailMine : styles.bubbleNoTailTheirs),
-                      ]}
-                    >
-                      <View style={styles.callCardContent}>
-                        <View
-                          style={[
-                            styles.callIconCircle,
-                            item.callTone === 'missed'
-                              ? styles.callIconCircleMissed
-                              : styles.callIconCircleDark,
-                          ]}
-                        >
-                          {item.callTone === 'missed' ? (
-                            <FontAwesome5 name="video" size={17} color="#FFFFFF" solid />
-                          ) : item.callTone === 'canceled' ? (
-                            <CanceledVideoIcon size={20} color="#FFFFFF" />
-                          ) : (
-                            <VideoCallIcon size={20} color="#FFFFFF" />
-                          )}
-                        </View>
-
-                        <View style={styles.callBody}>
-                          <Text style={styles.callTitle}>{item.title}</Text>
-                          <Text
-                            style={[
-                              styles.callSubtitle,
-                              mine ? styles.callSubtitleMine : styles.callSubtitleTheirs,
-                            ]}
-                          >
-                            {item.subtitle}
-                          </Text>
-                        </View>
-                      </View>
-
-                      <View style={styles.callFooter}>
-                        <Text
-                          style={[
-                            styles.callTime,
-                            mine ? styles.callTimeMine : styles.callTimeTheirs,
-                          ]}
-                        >
-                          {item.time}
-                        </Text>
-                        {mine && <View style={styles.messageSeenRing} />}
-                      </View>
+          {messages.length === 0 ? (
+            <View style={styles.emptyChatWrap}>
+              {renderContactAvatar(activeContact, 72)}
+              <Text style={styles.emptyChatName}>{activeContact.name}</Text>
+              <Text style={styles.emptyChatSubtitle}>{activeContact.subtitle}</Text>
+              <View style={styles.emptyChatWave}>
+                <Text style={styles.emptyChatWaveText}>Say hello to start chatting 👋</Text>
+              </View>
+            </View>
+          ) : (
+            messages.map((item) => {
+              if (item.type === 'date') {
+                return (
+                  <View key={item.id} style={styles.dateBadgeWrap}>
+                    <View style={styles.dateBadge}>
+                      <Text style={styles.dateBadgeText}>{item.label}</Text>
                     </View>
                   </View>
+                );
+              }
 
-                  {mine && (
-                    <View style={styles.avatarColumn}>
-                      {showAvatar ? (
-                        <Image source={senderAvatarSource} style={styles.senderAvatarImg} />
-                      ) : (
-                        <View style={styles.avatarPlaceholder} />
-                      )}
-                    </View>
-                  )}
-                </View>
-              );
-            }
+              const mine = item.sender === 'me';
+              const showAvatar = item.showAvatar !== false;
 
-            if (item.type === 'text') {
-              return (
-                <View
-                  key={item.id}
-                  style={[
-                    styles.messageRow,
-                    mine ? styles.messageRowMine : styles.messageRowTheirs,
-                  ]}
-                >
-                  {!mine && (
-                    <View style={styles.avatarColumn}>
-                      {showAvatar ? (
-                        <Image source={avatarSources[activeContact.avater ?? '']} style={styles.senderAvatarImg} />
-                      ) : (
-                        <View style={styles.avatarPlaceholder} />
-                      )}
-                    </View>
-                  )}
+              if (item.type === 'call') {
+                return (
+                  <View
+                    key={item.id}
+                    style={[
+                      styles.messageRow,
+                      mine ? styles.messageRowMine : styles.messageRowTheirs,
+                    ]}
+                  >
+                    {!mine && (
+                      <View style={styles.avatarColumn}>
+                        {showAvatar ? (
+                          renderContactAvatar(activeContact, 36)
+                        ) : (
+                          <View style={styles.avatarPlaceholder} />
+                        )}
+                      </View>
+                    )}
 
-                  <View style={styles.bubbleWrapper}>
-                    {showAvatar && (mine ? <BubbleTailMine color="#035587" /> : <BubbleTailTheirs color="#282A2F" />)}
+                    <View style={styles.bubbleWrapper}>
+                      {showAvatar && (mine ? <BubbleTailMine color="#035587" /> : <BubbleTailTheirs color="#282A2F" />)}
 
-                    <View
-                      style={[
-                        styles.textBubble,
-                        mine ? styles.textBubbleMine : styles.textBubbleTheirs,
-                        !showAvatar && (mine ? styles.bubbleNoTailMine : styles.bubbleNoTailTheirs),
-                      ]}
-                    >
-                      <Text
+                      <View
                         style={[
-                          styles.messageText,
-                          item.isPhone && styles.messagePhoneText,
+                          styles.callCard,
+                          mine ? styles.callCardMine : styles.callCardTheirs,
+                          !showAvatar && (mine ? styles.bubbleNoTailMine : styles.bubbleNoTailTheirs),
                         ]}
                       >
-                        {item.text}
-                      </Text>
+                        <View style={styles.callCardContent}>
+                          <View
+                            style={[
+                              styles.callIconCircle,
+                              item.callTone === 'missed'
+                                ? styles.callIconCircleMissed
+                                : styles.callIconCircleDark,
+                            ]}
+                          >
+                            {item.callTone === 'missed' ? (
+                              <FontAwesome5 name="video" size={17} color="#FFFFFF" solid />
+                            ) : item.callTone === 'canceled' ? (
+                              <CanceledVideoIcon size={20} color="#FFFFFF" />
+                            ) : (
+                              <VideoCallIcon size={20} color="#FFFFFF" />
+                            )}
+                          </View>
 
-                      <View style={styles.textMetaRow}>
-                        <Text
-                          style={[
-                            styles.messageTime,
-                            mine ? styles.callTimeMine : styles.callTimeTheirs,
-                          ]}
-                        >
-                          {item.time}
-                        </Text>
-                        {mine && <View style={styles.messageSeenRing} />}
+                          <View style={styles.callBody}>
+                            <Text style={styles.callTitle}>{item.title}</Text>
+                            <Text
+                              style={[
+                                styles.callSubtitle,
+                                mine ? styles.callSubtitleMine : styles.callSubtitleTheirs,
+                              ]}
+                            >
+                              {item.subtitle}
+                            </Text>
+                          </View>
+                        </View>
+
+                        <View style={styles.callFooter}>
+                          <Text
+                            style={[
+                              styles.callTime,
+                              mine ? styles.callTimeMine : styles.callTimeTheirs,
+                            ]}
+                          >
+                            {item.time}
+                          </Text>
+                          {mine && <View style={styles.messageSeenRing} />}
+                        </View>
                       </View>
                     </View>
+
+                    {mine && (
+                      <View style={styles.avatarColumn}>
+                        {showAvatar ? (
+                          <Image source={senderAvatarSource} style={styles.senderAvatarImg} />
+                        ) : (
+                          <View style={styles.avatarPlaceholder} />
+                        )}
+                      </View>
+                    )}
                   </View>
+                );
+              }
 
-                  {mine && (
-                    <View style={styles.avatarColumn}>
-                      {showAvatar ? (
-                        <Image source={senderAvatarSource} style={styles.senderAvatarImg} />
-                      ) : (
-                        <View style={styles.avatarPlaceholder} />
-                      )}
+              if (item.type === 'text') {
+                return (
+                  <View
+                    key={item.id}
+                    style={[
+                      styles.messageRow,
+                      mine ? styles.messageRowMine : styles.messageRowTheirs,
+                    ]}
+                  >
+                    {!mine && (
+                      <View style={styles.avatarColumn}>
+                        {showAvatar ? (
+                          renderContactAvatar(activeContact, 36)
+                        ) : (
+                          <View style={styles.avatarPlaceholder} />
+                        )}
+                      </View>
+                    )}
+
+                    <View style={styles.bubbleWrapper}>
+                      {showAvatar && (mine ? <BubbleTailMine color="#035587" /> : <BubbleTailTheirs color="#282A2F" />)}
+
+                      <View
+                        style={[
+                          styles.textBubble,
+                          mine ? styles.textBubbleMine : styles.textBubbleTheirs,
+                          !showAvatar && (mine ? styles.bubbleNoTailMine : styles.bubbleNoTailTheirs),
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.messageText,
+                            item.isPhone && styles.messagePhoneText,
+                          ]}
+                        >
+                          {item.text}
+                        </Text>
+
+                        <View style={styles.textMetaRow}>
+                          <Text
+                            style={[
+                              styles.messageTime,
+                              mine ? styles.callTimeMine : styles.callTimeTheirs,
+                            ]}
+                          >
+                            {item.time}
+                          </Text>
+                          {mine && <View style={styles.messageSeenRing} />}
+                        </View>
+                      </View>
                     </View>
-                  )}
-                </View>
-              );
-            }
 
-            return null;
-          })}
+                    {mine && (
+                      <View style={styles.avatarColumn}>
+                        {showAvatar ? (
+                          <Image source={senderAvatarSource} style={styles.senderAvatarImg} />
+                        ) : (
+                          <View style={styles.avatarPlaceholder} />
+                        )}
+                      </View>
+                    )}
+                  </View>
+                );
+              }
+
+              return null;
+            })
+          )}
         </ScrollView>
 
         {/* Quick Reaction Bar */}
@@ -642,7 +876,14 @@ export default function App() {
         </View>
 
         {/* Right Menu Button with Green "1" Badge */}
-        <TouchableOpacity activeOpacity={0.8} style={styles.topRightBtn}>
+        <TouchableOpacity
+          activeOpacity={0.8}
+          style={styles.topRightBtn}
+          onPress={() => {
+            setShowManualForm(false);
+            setIsImportModalVisible(true);
+          }}
+        >
           <View style={styles.topRightUserWrap}>
             <FontAwesome5 name="user-alt" size={20} color="#B0B6BD" />
             <View style={styles.topRightLines}>
@@ -656,43 +897,11 @@ export default function App() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-      >
-        {/* Stories Row - 1:1 matching imo_start.jpeg (Story, পরশ, Planet) */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.storyRow}
-        >
-          {stories.map((item) => (
-            <View key={item.id} style={styles.storyItem}>
-              {item.plus ? (
-                <View style={styles.storyAddWrap}>
-                  <View style={styles.storyAddCircle}>
-                    <FontAwesome5 name="camera" size={24} color="#C4CAD1" />
-                  </View>
-                  <View style={styles.storyPlusBadge}>
-                    <Plus color="#FFFFFF" size={16} strokeWidth={3} />
-                  </View>
-                </View>
-              ) : (
-                <View style={styles.storyImageWrap}>
-                  <Image source={item.image!} style={styles.storyImg} />
-                </View>
-              )}
-              <Text style={styles.storyLabel} numberOfLines={1}>
-                {item.name}
-              </Text>
-            </View>
-          ))}
-        </ScrollView>
-
-        <View style={styles.listSeparator} />
-
-        {/* Contacts / Chat List - EXACT items matching imo_start.jpeg */}
-        {contacts.map((item) => (
+      {/* Contact List using FlatList for performant lazy loading on scroll */}
+      <FlatList
+        data={displayedContacts}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => (
           <TouchableOpacity
             key={item.id}
             style={styles.contactRow}
@@ -715,12 +924,67 @@ export default function App() {
               </TouchableOpacity>
             </View>
           </TouchableOpacity>
-        ))}
-      </ScrollView>
+        )}
+        ListHeaderComponent={
+          <>
+            {/* Stories Row - 1:1 matching imo_start.jpeg */}
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.storyRow}
+            >
+              {stories.map((item) => (
+                <View key={item.id} style={styles.storyItem}>
+                  {item.plus ? (
+                    <View style={styles.storyAddWrap}>
+                      <View style={styles.storyAddCircle}>
+                        <FontAwesome5 name="camera" size={24} color="#C4CAD1" />
+                      </View>
+                      <View style={styles.storyPlusBadge}>
+                        <Plus color="#FFFFFF" size={16} strokeWidth={3} />
+                      </View>
+                    </View>
+                  ) : (
+                    <View style={styles.storyImageWrap}>
+                      <Image source={item.image!} style={styles.storyImg} />
+                    </View>
+                  )}
+                  <Text style={styles.storyLabel} numberOfLines={1}>
+                    {item.name}
+                  </Text>
+                </View>
+              ))}
+            </ScrollView>
+
+            <View style={styles.listSeparator} />
+          </>
+        }
+        ListFooterComponent={
+          hasMoreToLoad ? (
+            <View style={styles.lazyLoadFooter}>
+              <ActivityIndicator size="small" color="#00A3FF" />
+              <Text style={styles.lazyLoadText}>Loading more contacts...</Text>
+            </View>
+          ) : (
+            <View style={{ height: 76 }} />
+          )
+        }
+        onEndReached={handleLoadMoreContacts}
+        onEndReachedThreshold={0.4}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      />
 
       {/* Bottom Floating Action Bar */}
       <View style={styles.bottomBar}>
-        <TouchableOpacity activeOpacity={0.8} style={styles.bottomActionBtn}>
+        <TouchableOpacity
+          activeOpacity={0.8}
+          style={styles.bottomActionBtn}
+          onPress={() => {
+            setShowManualForm(true);
+            setIsImportModalVisible(true);
+          }}
+        >
           <Plus color="#00A3FF" size={30} strokeWidth={2.4} />
         </TouchableOpacity>
         <TouchableOpacity activeOpacity={0.8} style={styles.bottomActionBtn}>
@@ -736,6 +1000,160 @@ export default function App() {
       <View style={styles.screen}>
         {activeContactId ? renderConversation() : renderStartScreen()}
       </View>
+
+      {/* Contact Import / Add Modal */}
+      <Modal
+        visible={isImportModalVisible}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setIsImportModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            {/* Modal Header */}
+            <View style={styles.modalHeader}>
+              <View style={styles.modalHeaderTitleWrap}>
+                <UserPlus color="#00A3FF" size={22} strokeWidth={2.2} />
+                <Text style={styles.modalHeaderTitle}>Add Contacts</Text>
+              </View>
+              <TouchableOpacity
+                activeOpacity={0.7}
+                style={styles.modalCloseBtn}
+                onPress={() => setIsImportModalVisible(false)}
+              >
+                <X color="#9AA0A6" size={22} strokeWidth={2.2} />
+              </TouchableOpacity>
+            </View>
+
+            {/* Mode Selector */}
+            <View style={styles.modalTabs}>
+              <TouchableOpacity
+                activeOpacity={0.8}
+                style={[styles.modalTabBtn, !showManualForm && styles.modalTabBtnActive]}
+                onPress={() => setShowManualForm(false)}
+              >
+                <Text style={[styles.modalTabText, !showManualForm && styles.modalTabTextActive]}>
+                  Phone Contacts
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                activeOpacity={0.8}
+                style={[styles.modalTabBtn, showManualForm && styles.modalTabBtnActive]}
+                onPress={() => setShowManualForm(true)}
+              >
+                <Text style={[styles.modalTabText, showManualForm && styles.modalTabTextActive]}>
+                  Manual Add
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {showManualForm ? (
+              /* Manual Add Form */
+              <View style={styles.manualFormContainer}>
+                <Text style={styles.inputLabel}>Full Name</Text>
+                <TextInput
+                  style={styles.modalInput}
+                  placeholder="e.g. Shakib Al Hasan"
+                  placeholderTextColor="#727780"
+                  value={manualName}
+                  onChangeText={setManualName}
+                />
+
+                <Text style={[styles.inputLabel, { marginTop: 14 }]}>Phone Number</Text>
+                <TextInput
+                  style={styles.modalInput}
+                  placeholder="e.g. +880 1712-345678"
+                  placeholderTextColor="#727780"
+                  keyboardType="phone-pad"
+                  value={manualPhone}
+                  onChangeText={setManualPhone}
+                />
+
+                <View style={styles.defaultAvatarNote}>
+                  <View style={styles.defaultMiniAvatar}>
+                    <FontAwesome5 name="user" solid size={14} color="#8A8F98" />
+                  </View>
+                  <Text style={styles.defaultAvatarNoteText}>
+                    Will be added with imo's default profile avatar
+                  </Text>
+                </View>
+
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  style={styles.addSubmitBtn}
+                  onPress={handleAddManualContact}
+                >
+                  <Check color="#FFFFFF" size={20} strokeWidth={2.5} />
+                  <Text style={styles.addSubmitBtnText}>Add to Contacts</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              /* Device Contacts List */
+              <>
+                <View style={styles.modalSearchWrap}>
+                  <Search color="#8F949B" size={18} strokeWidth={2.2} />
+                  <TextInput
+                    style={styles.modalSearchInput}
+                    placeholder="Search phone contacts..."
+                    placeholderTextColor="#727780"
+                    value={contactSearchText}
+                    onChangeText={setContactSearchText}
+                  />
+                  {contactSearchText.length > 0 && (
+                    <TouchableOpacity onPress={() => setContactSearchText('')}>
+                      <X color="#727780" size={16} />
+                    </TouchableOpacity>
+                  )}
+                </View>
+
+                {isLoadingContacts ? (
+                  <View style={styles.loadingContainer}>
+                    <ActivityIndicator size="large" color="#00A3FF" />
+                    <Text style={styles.loadingText}>Reading phone contacts...</Text>
+                  </View>
+                ) : (
+                  <ScrollView
+                    style={styles.deviceContactsScroll}
+                    contentContainerStyle={styles.deviceContactsScrollContent}
+                    showsVerticalScrollIndicator={false}
+                  >
+                    {filteredDeviceContacts.length === 0 ? (
+                      <View style={styles.emptyContainer}>
+                        <Text style={styles.emptyText}>No matching contacts found</Text>
+                      </View>
+                    ) : (
+                      filteredDeviceContacts.map((c) => (
+                        <TouchableOpacity
+                          key={c.id}
+                          style={styles.deviceContactRow}
+                          activeOpacity={0.7}
+                          onPress={() => {
+                            setActiveContactId(c.id);
+                            setIsImportModalVisible(false);
+                          }}
+                        >
+                          <View style={styles.deviceContactAvatar}>
+                            {renderContactAvatar(c, 44)}
+                          </View>
+
+                          <View style={styles.deviceContactInfo}>
+                            <Text style={styles.deviceContactName}>{c.name}</Text>
+                            <Text style={styles.deviceContactPhone}>{c.subtitle}</Text>
+                          </View>
+
+                          <View style={styles.deviceAddPill}>
+                            <Text style={styles.deviceAddPillText}>Chat</Text>
+                          </View>
+                        </TouchableOpacity>
+                      ))
+                    )}
+                  </ScrollView>
+                )}
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -970,6 +1388,17 @@ const styles = StyleSheet.create({
   callIconBtn: {
     padding: 2,
   },
+  lazyLoadFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 18,
+    gap: 10,
+  },
+  lazyLoadText: {
+    color: '#8E949B',
+    fontSize: 13,
+  },
 
   /* Bottom Floating Action Bar */
   bottomBar: {
@@ -986,6 +1415,193 @@ const styles = StyleSheet.create({
   },
   bottomActionBtn: {
     padding: 8,
+  },
+
+  /* Contact Import Modal */
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#1E2026',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingTop: 18,
+    paddingBottom: 24,
+    paddingHorizontal: 18,
+    maxHeight: '85%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  modalHeaderTitleWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  modalHeaderTitle: {
+    color: '#FFFFFF',
+    fontSize: 19,
+    fontWeight: '700',
+  },
+  modalCloseBtn: {
+    padding: 6,
+  },
+  modalTabs: {
+    flexDirection: 'row',
+    backgroundColor: '#141519',
+    borderRadius: 12,
+    padding: 4,
+    marginBottom: 16,
+  },
+  modalTabBtn: {
+    flex: 1,
+    paddingVertical: 9,
+    alignItems: 'center',
+    borderRadius: 9,
+  },
+  modalTabBtnActive: {
+    backgroundColor: '#00A3FF',
+  },
+  modalTabText: {
+    color: '#8E949B',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  modalTabTextActive: {
+    color: '#FFFFFF',
+  },
+  modalSearchWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#141519',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    height: 44,
+    marginBottom: 14,
+    gap: 8,
+  },
+  modalSearchInput: {
+    flex: 1,
+    color: '#FFFFFF',
+    fontSize: 15,
+  },
+  deviceContactsScroll: {
+    maxHeight: 380,
+  },
+  deviceContactsScrollContent: {
+    paddingBottom: 10,
+  },
+  deviceContactRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 11,
+    borderBottomWidth: 1,
+    borderBottomColor: '#282B33',
+  },
+  deviceContactAvatar: {
+    width: 44,
+    height: 44,
+    marginRight: 12,
+  },
+  deviceContactInfo: {
+    flex: 1,
+  },
+  deviceContactName: {
+    color: '#FFFFFF',
+    fontSize: 15.5,
+    fontWeight: '600',
+  },
+  deviceContactPhone: {
+    color: '#8E949B',
+    fontSize: 12.5,
+    marginTop: 2,
+  },
+  deviceAddPill: {
+    backgroundColor: '#00A3FF',
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 14,
+  },
+  deviceAddPillText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  manualFormContainer: {
+    paddingVertical: 6,
+  },
+  inputLabel: {
+    color: '#D1D5DB',
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 6,
+  },
+  modalInput: {
+    backgroundColor: '#141519',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    height: 48,
+    color: '#FFFFFF',
+    fontSize: 15,
+  },
+  defaultAvatarNote: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 18,
+    backgroundColor: '#171920',
+    padding: 12,
+    borderRadius: 12,
+    gap: 10,
+  },
+  defaultMiniAvatar: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: '#444851',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  defaultAvatarNoteText: {
+    color: '#8E949B',
+    fontSize: 12.5,
+    flex: 1,
+  },
+  addSubmitBtn: {
+    backgroundColor: '#00A3FF',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 50,
+    borderRadius: 25,
+    marginTop: 22,
+    gap: 8,
+  },
+  addSubmitBtnText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  loadingContainer: {
+    paddingVertical: 40,
+    alignItems: 'center',
+    gap: 12,
+  },
+  loadingText: {
+    color: '#8E949B',
+    fontSize: 14,
+  },
+  emptyContainer: {
+    paddingVertical: 40,
+    alignItems: 'center',
+  },
+  emptyText: {
+    color: '#727780',
+    fontSize: 14,
   },
 
   /* Conversation Screen Styles */
@@ -1038,6 +1654,35 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingTop: 12,
     paddingBottom: 14,
+  },
+  emptyChatWrap: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: 60,
+    paddingHorizontal: 20,
+  },
+  emptyChatName: {
+    color: '#FFFFFF',
+    fontSize: 20,
+    fontWeight: '700',
+    marginTop: 16,
+  },
+  emptyChatSubtitle: {
+    color: '#8E949B',
+    fontSize: 14,
+    marginTop: 4,
+  },
+  emptyChatWave: {
+    marginTop: 24,
+    backgroundColor: '#1E2026',
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: 20,
+  },
+  emptyChatWaveText: {
+    color: '#00A3FF',
+    fontSize: 14,
+    fontWeight: '600',
   },
   dateBadgeWrap: {
     alignItems: 'center',

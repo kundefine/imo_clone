@@ -1,18 +1,21 @@
 import { FontAwesome5 } from '@expo/vector-icons';
 import { Camera, ChatBubble, ChatLines, NavArrowRight } from 'iconoir-react-native';
-import { ArrowLeft, Image as ImageIcon, MoreVertical, Plus, Search, Smile, Video } from 'lucide-react-native';
+import { ArrowLeft, MoreVertical, Plus, Search } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
-import { Platform, StatusBar } from 'react-native';
 import {
   Image,
   ImageSourcePropType,
+  Platform,
   SafeAreaView,
   ScrollView,
+  StatusBar,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
+import Svg, { Circle, Path, Rect } from 'react-native-svg';
 
 const contacts = require('./db/contact.json') as ContactItem[];
 const conversations = require('./db/conversations.json') as ConversationThread[];
@@ -49,6 +52,8 @@ type ConversationItem =
       sender: 'me' | 'them';
       text: string;
       time: string;
+      isPhone?: boolean;
+      showAvatar?: boolean;
     }
   | {
       id: string;
@@ -57,6 +62,7 @@ type ConversationItem =
       time: string;
       caption: string;
       imageTone: 'paper' | 'portrait';
+      showAvatar?: boolean;
     }
   | {
       id: string;
@@ -65,7 +71,8 @@ type ConversationItem =
       title: string;
       subtitle: string;
       time: string;
-      callTone: 'missed' | 'done';
+      callTone: 'missed' | 'done' | 'video' | 'canceled';
+      showAvatar?: boolean;
     };
 
 type ConversationThread = {
@@ -81,7 +88,9 @@ const stories: StoryItem[] = [
   { id: 's4', name: 'Marketpla..', marketplace: true },
 ];
 
-const reactions = ['🎲', '😡', '😭', '😩', '🥲', '👻', '😞', '😘', '💕'];
+const reactionEmojis = ['😡', '😭', '😩', '🥲', '👻', '😞', '😘', '💕'];
+const reactionDiceSource: ImageSourcePropType = require('./assets/apk/reaction_first_icon.png');
+const senderAvatarSource: ImageSourcePropType = require('./assets/avater/sender_me_clean.png');
 
 const avatarSources: Record<string, ImageSourcePropType> = {
   '../assets/avater/deepaknaik-soniya-bansal-8065649.jpg': require('./assets/avater/deepaknaik-soniya-bansal-8065649.jpg'),
@@ -90,6 +99,8 @@ const avatarSources: Record<string, ImageSourcePropType> = {
   '../assets/avater/rachealmarie-ai-generated-8626079_1920.jpg': require('./assets/avater/rachealmarie-ai-generated-8626079_1920.jpg'),
   '../assets/avater/raheel9630-aditi-rao-hydari-1748439_1920.jpg': require('./assets/avater/raheel9630-aditi-rao-hydari-1748439_1920.jpg'),
   '../assets/avater/raheel9630-priyanka-chopra-1748203_1920.jpg': require('./assets/avater/raheel9630-priyanka-chopra-1748203_1920.jpg'),
+  '../assets/avater/jorna_avatar.png': require('./assets/avater/jorna_avatar.png'),
+  '../assets/avater/sender_me_clean.png': senderAvatarSource,
 };
 
 function CircleAvatar({
@@ -213,8 +224,123 @@ function renderSubtitleTone(
   );
 }
 
+/* SVG Helpers for precise conversation matching */
+function VideoCallIcon({ size = 20, color = '#FFFFFF' }: { size?: number; color?: string }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M3 6.5C3 5.12 4.12 4 5.5 4H14.5C15.88 4 17 5.12 17 6.5V17.5C17 18.88 15.88 20 14.5 20H5.5C4.12 20 3 18.88 3 17.5V6.5Z"
+        fill={color}
+      />
+      <Path
+        d="M17 10.2L20.5 7.7C21.1 7.27 22 7.7 22 8.44V15.56C22 16.3 21.1 16.73 20.5 16.3L17 13.8V10.2Z"
+        fill={color}
+      />
+    </Svg>
+  );
+}
+
+function CanceledVideoIcon({ size = 20, color = '#FFFFFF' }: { size?: number; color?: string }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M3 6.5C3 5.12 4.12 4 5.5 4H14.5C15.88 4 17 5.12 17 6.5V17.5C17 18.88 15.88 20 14.5 20H5.5C4.12 20 3 18.88 3 17.5V6.5Z"
+        fill={color}
+      />
+      <Path
+        d="M17 10.2L20.5 7.7C21.1 7.27 22 7.7 22 8.44V15.56C22 16.3 21.1 16.73 20.5 16.3L17 13.8V10.2Z"
+        fill={color}
+      />
+      <Path
+        d="M7.5 14.5L12.5 9.5M12.5 9.5H8.8M12.5 9.5V13.2"
+        stroke="#033B5E"
+        strokeWidth="2.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
+function BubbleTailMine({ color = '#035587' }: { color?: string }) {
+  return (
+    <View style={styles.tailMinePosition}>
+      <Svg width={8} height={12} viewBox="0 0 8 12">
+        <Path d="M0 0 Q6 1 8 0 C5 3 2 8 0 12 Z" fill={color} />
+      </Svg>
+    </View>
+  );
+}
+
+function BubbleTailTheirs({ color = '#282A2F' }: { color?: string }) {
+  return (
+    <View style={styles.tailTheirsPosition}>
+      <Svg width={8} height={12} viewBox="0 0 8 12">
+        <Path d="M8 0 Q2 1 0 0 C3 3 6 8 8 12 Z" fill={color} />
+      </Svg>
+    </View>
+  );
+}
+
+function OpenSmileIcon({ size = 24, color = '#9AA0A6' }: { size?: number; color?: string }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Circle cx="12" cy="12" r="9.5" stroke={color} strokeWidth="1.9" />
+      <Circle cx="8.8" cy="9.8" r="1.2" fill={color} />
+      <Circle cx="15.2" cy="9.8" r="1.2" fill={color} />
+      <Path
+        d="M7.8 13.5C8.3 16.2 10.8 17.5 12 17.5C13.2 17.5 15.7 16.2 16.2 13.5H7.8Z"
+        stroke={color}
+        strokeWidth="1.7"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
+function GalleryIcon({ size = 22, color = '#B8BDC3' }: { size?: number; color?: string }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Rect x="3.5" y="3.5" width="17" height="17" rx="4.5" stroke={color} strokeWidth="1.9" />
+      <Circle cx="8.5" cy="8.5" r="1.5" fill={color} />
+      <Path
+        d="M20.5 16.2L15.5 11.2L5 20.5"
+        stroke={color}
+        strokeWidth="1.9"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
+function CirclePlusIcon({ size = 22, color = '#B8BDC3' }: { size?: number; color?: string }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Circle cx="12" cy="12" r="9.5" stroke={color} strokeWidth="1.9" />
+      <Path d="M12 7.5V16.5M7.5 12H16.5" stroke={color} strokeWidth="2" strokeLinecap="round" />
+    </Svg>
+  );
+}
+
+function MicIcon({ size = 22, color = '#FFFFFF' }: { size?: number; color?: string }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Rect x="8.5" y="3.5" width="7" height="11.5" rx="3.5" fill={color} />
+      <Path
+        d="M5 10.5C5 14.36 8.13 17.5 12 17.5C15.87 17.5 19 14.36 19 10.5"
+        stroke={color}
+        strokeWidth="2.2"
+        strokeLinecap="round"
+      />
+      <Path d="M12 17.5V21.5M8.5 21.5H15.5" stroke={color} strokeWidth="2.2" strokeLinecap="round" />
+    </Svg>
+  );
+}
+
 export default function App() {
-  const [activeContactId, setActiveContactId] = useState<string | null>(null);
+  const [activeContactId, setActiveContactId] = useState<string | null>('c3');
+  const [messageInput, setMessageInput] = useState('');
 
   const activeContact = useMemo(
     () => contacts.find((item) => item.id === activeContactId) ?? null,
@@ -234,28 +360,40 @@ export default function App() {
     const lastSeen = activeConversation?.lastSeen ?? 'Last seen recently';
 
     return (
-      <>
+      <View style={styles.conversationContainer}>
+        {/* Header - EXACT 1:1 matching imo_conversation_design.jpeg */}
         <View style={styles.chatHeader}>
           <TouchableOpacity
-            activeOpacity={0.8}
+            activeOpacity={0.7}
             style={styles.chatHeaderBack}
             onPress={() => setActiveContactId(null)}
           >
-            <ArrowLeft color="#FFFFFF" size={32} strokeWidth={2.2} />
+            <ArrowLeft color="#FFFFFF" size={24} strokeWidth={2.4} />
           </TouchableOpacity>
 
           <View style={styles.chatHeaderCenter}>
-            <Text style={styles.chatHeaderTitle}>{activeContact.name}</Text>
-            <Text style={styles.chatHeaderSubtitle}>{lastSeen}</Text>
+            <Text style={styles.chatHeaderTitle} numberOfLines={1}>
+              {activeContact.name}
+            </Text>
+            <Text style={styles.chatHeaderSubtitle} numberOfLines={1}>
+              {lastSeen}
+            </Text>
           </View>
 
           <View style={styles.chatHeaderActions}>
-            <FontAwesome5 name="phone-alt" size={20} color="#08A4FF" solid />
-            <Video color="#08A4FF" size={24} strokeWidth={2.5} />
-            <MoreVertical color="#FFFFFF" size={22} strokeWidth={2.2} />
+            <TouchableOpacity activeOpacity={0.7} style={styles.headerActionBtn}>
+              <FontAwesome5 name="phone-alt" size={19} color="#00A3FF" />
+            </TouchableOpacity>
+            <TouchableOpacity activeOpacity={0.7} style={styles.headerActionBtn}>
+              <FontAwesome5 name="video" size={19} color="#00A3FF" solid />
+            </TouchableOpacity>
+            <TouchableOpacity activeOpacity={0.7} style={styles.headerActionBtn}>
+              <MoreVertical color="#FFFFFF" size={24} strokeWidth={2.4} />
+            </TouchableOpacity>
           </View>
         </View>
 
+        {/* Message Thread */}
         <ScrollView
           style={styles.chatScroll}
           contentContainerStyle={styles.chatScrollContent}
@@ -264,73 +402,46 @@ export default function App() {
           {messages.map((item) => {
             if (item.type === 'date') {
               return (
-                <View key={item.id} style={styles.dateBadge}>
-                  <Text style={styles.dateBadgeText}>{item.label}</Text>
-                </View>
-              );
-            }
-
-            if (item.type === 'text') {
-              const mine = item.sender === 'me';
-              return (
-                <View
-                  key={item.id}
-                  style={[styles.messageRow, mine ? styles.messageRowMine : styles.messageRowTheirs]}
-                >
-                  {!mine ? (
-                    <ContactAvatar contact={activeContact} size={44} />
-                  ) : null}
-
-                  <View
-                    style={[
-                      styles.messageBubbleWrap,
-                      mine ? styles.bubbleContainerMine : styles.messageBubbleWrapTheirs,
-                    ]}
-                  >
-                    <View
-                      style={[
-                        styles.messageBubble,
-                        mine ? styles.messageBubbleMine : styles.messageBubbleTheirs,
-                      ]}
-                    >
-                    <Text style={styles.messageText}>{item.text}</Text>
-                      <View style={styles.messageMetaRow}>
-                        <Text style={styles.messageTime}>{item.time}</Text>
-                        <View style={styles.messageSeenDot} />
-                      </View>
-                    </View>
+                <View key={item.id} style={styles.dateBadgeWrap}>
+                  <View style={styles.dateBadge}>
+                    <Text style={styles.dateBadgeText}>{item.label}</Text>
                   </View>
-
-                  {mine ? (
-                    <View style={styles.sentAvatarWrap}>
-                  <CircleAvatar label="S" accent="#BDEBDD" size={30} />
-                    </View>
-                  ) : null}
                 </View>
               );
             }
+
+            const mine = item.sender === 'me';
+            const showAvatar = item.showAvatar !== false;
 
             if (item.type === 'call') {
-              const mine = item.sender === 'me';
               return (
                 <View
                   key={item.id}
-                  style={[styles.messageRow, mine ? styles.messageRowMine : styles.messageRowTheirs]}
+                  style={[
+                    styles.messageRow,
+                    mine ? styles.messageRowMine : styles.messageRowTheirs,
+                  ]}
                 >
-                  {!mine ? (
-                    <ContactAvatar contact={activeContact} size={44} />
-                  ) : null}
+                  {/* Left Avatar for incoming */}
+                  {!mine && (
+                    <View style={styles.avatarColumn}>
+                      {showAvatar ? (
+                        <ContactAvatar contact={activeContact} size={36} />
+                      ) : (
+                        <View style={styles.avatarPlaceholder} />
+                      )}
+                    </View>
+                  )}
 
-                  <View
-                    style={[
-                      styles.callCardWrap,
-                      mine ? styles.bubbleContainerMine : styles.callCardWrapTheirs,
-                    ]}
-                  >
+                  {/* Call Bubble */}
+                  <View style={styles.bubbleWrapper}>
+                    {showAvatar && (mine ? <BubbleTailMine color="#035587" /> : <BubbleTailTheirs color="#282A2F" />)}
+
                     <View
                       style={[
                         styles.callCard,
                         mine ? styles.callCardMine : styles.callCardTheirs,
+                        !showAvatar && (mine ? styles.bubbleNoTailMine : styles.bubbleNoTailTheirs),
                       ]}
                     >
                       <View style={styles.callCardContent}>
@@ -339,97 +450,170 @@ export default function App() {
                             styles.callIconCircle,
                             item.callTone === 'missed'
                               ? styles.callIconCircleMissed
-                              : styles.callIconCircleDone,
+                              : styles.callIconCircleDark,
                           ]}
                         >
-                          <Video color="#FFFFFF" size={18} strokeWidth={2.4} />
+                          {item.callTone === 'missed' ? (
+                            <FontAwesome5 name="video" size={17} color="#FFFFFF" solid />
+                          ) : item.callTone === 'canceled' ? (
+                            <CanceledVideoIcon size={20} color="#FFFFFF" />
+                          ) : (
+                            <VideoCallIcon size={20} color="#FFFFFF" />
+                          )}
                         </View>
+
                         <View style={styles.callBody}>
                           <Text style={styles.callTitle}>{item.title}</Text>
-                          <Text style={styles.callSubtitle}>{item.subtitle}</Text>
+                          <Text
+                            style={[
+                              styles.callSubtitle,
+                              mine ? styles.callSubtitleMine : styles.callSubtitleTheirs,
+                            ]}
+                          >
+                            {item.subtitle}
+                          </Text>
                         </View>
                       </View>
+
                       <View style={styles.callFooter}>
-                        <Text style={styles.callTime}>{item.time}</Text>
-                        {mine ? <View style={styles.messageSeenDot} /> : null}
+                        <Text
+                          style={[
+                            styles.callTime,
+                            mine ? styles.callTimeMine : styles.callTimeTheirs,
+                          ]}
+                        >
+                          {item.time}
+                        </Text>
+                        {mine && <View style={styles.messageSeenRing} />}
                       </View>
                     </View>
                   </View>
 
-                  {mine ? (
-                    <View style={styles.sentAvatarWrap}>
-                      <CircleAvatar label="S" accent="#BDEBDD" size={30} />
+                  {/* Right Avatar for outgoing */}
+                  {mine && (
+                    <View style={styles.avatarColumn}>
+                      {showAvatar ? (
+                        <Image source={senderAvatarSource} style={styles.senderAvatarImg} />
+                      ) : (
+                        <View style={styles.avatarPlaceholder} />
+                      )}
                     </View>
-                  ) : null}
+                  )}
                 </View>
               );
             }
 
-            const mine = item.sender === 'me';
-            return (
-              <View
-                key={item.id}
-                style={[styles.messageRow, mine ? styles.messageRowMine : styles.messageRowTheirs]}
-              >
-                {!mine ? (
-                  <ContactAvatar contact={activeContact} size={44} />
-                ) : null}
-
+            if (item.type === 'text') {
+              return (
                 <View
+                  key={item.id}
                   style={[
-                    styles.imageCardWrap,
-                    mine ? styles.bubbleContainerMine : styles.imageCardWrapTheirs,
+                    styles.messageRow,
+                    mine ? styles.messageRowMine : styles.messageRowTheirs,
                   ]}
                 >
-                  <View style={[styles.imageCard, mine ? styles.imageCardMine : styles.imageCardTheirs]}>
+                  {!mine && (
+                    <View style={styles.avatarColumn}>
+                      {showAvatar ? (
+                        <ContactAvatar contact={activeContact} size={36} />
+                      ) : (
+                        <View style={styles.avatarPlaceholder} />
+                      )}
+                    </View>
+                  )}
+
+                  <View style={styles.bubbleWrapper}>
+                    {showAvatar && (mine ? <BubbleTailMine color="#035587" /> : <BubbleTailTheirs color="#282A2F" />)}
+
                     <View
                       style={[
-                        styles.imageMock,
-                        item.imageTone === 'portrait' ? styles.imageMockPortrait : styles.imageMockPaper,
+                        styles.textBubble,
+                        mine ? styles.textBubbleMine : styles.textBubbleTheirs,
+                        !showAvatar && (mine ? styles.bubbleNoTailMine : styles.bubbleNoTailTheirs),
                       ]}
                     >
-                      <Text style={styles.imageMockLabel}>{item.caption}</Text>
-                    </View>
-                    <View style={styles.imageMetaRow}>
-                      <Text style={styles.messageTime}>{item.time}</Text>
-                      <View style={styles.messageSeenDot} />
-                    </View>
-                  </View>
-                </View>
+                      <Text
+                        style={[
+                          styles.messageText,
+                          item.isPhone && styles.messagePhoneText,
+                        ]}
+                      >
+                        {item.text}
+                      </Text>
 
-                {mine ? (
-                  <View style={styles.sentAvatarWrap}>
-                    <CircleAvatar label="S" accent="#BDEBDD" size={30} />
+                      <View style={styles.textMetaRow}>
+                        <Text
+                          style={[
+                            styles.messageTime,
+                            mine ? styles.callTimeMine : styles.callTimeTheirs,
+                          ]}
+                        >
+                          {item.time}
+                        </Text>
+                        {mine && <View style={styles.messageSeenRing} />}
+                      </View>
+                    </View>
                   </View>
-                ) : null}
-              </View>
-            );
+
+                  {mine && (
+                    <View style={styles.avatarColumn}>
+                      {showAvatar ? (
+                        <Image source={senderAvatarSource} style={styles.senderAvatarImg} />
+                      ) : (
+                        <View style={styles.avatarPlaceholder} />
+                      )}
+                    </View>
+                  )}
+                </View>
+              );
+            }
+
+            return null;
           })}
         </ScrollView>
 
+        {/* Quick Reaction Bar */}
         <View style={styles.reactionBar}>
-          {reactions.map((reaction) => (
-            <Text key={reaction} style={styles.reactionItem}>
-              {reaction}
-            </Text>
+          <TouchableOpacity activeOpacity={0.7} style={styles.reactionItem}>
+            <Image source={reactionDiceSource} style={styles.reactionDice} resizeMode="contain" />
+          </TouchableOpacity>
+          {reactionEmojis.map((emoji, index) => (
+            <TouchableOpacity key={index} activeOpacity={0.7} style={styles.reactionItem}>
+              <Text style={styles.reactionEmojiText}>{emoji}</Text>
+            </TouchableOpacity>
           ))}
         </View>
 
+        {/* Message Composer */}
         <View style={styles.composerBar}>
-          <View style={styles.composerInput}>
-            <Smile color="#A0A4AA" size={26} strokeWidth={2.1} />
-            <Text style={styles.composerPlaceholder}>Message</Text>
-            <View style={styles.composerActions}>
-              <ImageIcon color="#A0A4AA" size={24} strokeWidth={2.1} />
-              <Plus color="#A0A4AA" size={24} strokeWidth={2.1} />
+          <View style={styles.composerInputWrap}>
+            <TouchableOpacity activeOpacity={0.7} style={styles.composerSmileBtn}>
+              <OpenSmileIcon size={25} color="#9AA0A6" />
+            </TouchableOpacity>
+
+            <TextInput
+              style={styles.composerTextInput}
+              placeholder="Message"
+              placeholderTextColor="#8F949B"
+              value={messageInput}
+              onChangeText={setMessageInput}
+            />
+
+            <View style={styles.composerRightActions}>
+              <TouchableOpacity activeOpacity={0.7} style={styles.composerActionIconBtn}>
+                <GalleryIcon size={23} color="#B8BDC3" />
+              </TouchableOpacity>
+              <TouchableOpacity activeOpacity={0.7} style={styles.composerActionIconBtn}>
+                <CirclePlusIcon size={23} color="#B8BDC3" />
+              </TouchableOpacity>
             </View>
           </View>
 
-          <View style={styles.micButton}>
-            <Text style={styles.micText}>🎤</Text>
-          </View>
+          <TouchableOpacity activeOpacity={0.8} style={styles.micCircleBtn}>
+            <MicIcon size={23} color="#FFFFFF" />
+          </TouchableOpacity>
         </View>
-      </>
+      </View>
     );
   };
 
@@ -533,7 +717,7 @@ export default function App() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <StatusBar barStyle="light-content" backgroundColor="#1E1F23" />
+      <StatusBar barStyle="light-content" backgroundColor="#16171B" />
       <View style={styles.screen}>
         {activeContactId ? renderConversation() : renderContacts()}
       </View>
@@ -544,12 +728,336 @@ export default function App() {
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: '#1E1F23',
+    backgroundColor: '#16171B',
   },
   screen: {
     flex: 1,
-    backgroundColor: '#1E1F23',
+    backgroundColor: '#0E0F12',
   },
+  conversationContainer: {
+    flex: 1,
+    backgroundColor: '#0E0F12',
+  },
+
+  /* Conversation Header */
+  chatHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight ?? 0) + 6 : 10,
+    paddingBottom: 12,
+    backgroundColor: '#16171B',
+    borderBottomWidth: 1,
+    borderBottomColor: '#202227',
+  },
+  chatHeaderBack: {
+    padding: 6,
+    marginRight: 6,
+  },
+  chatHeaderCenter: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  chatHeaderTitle: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '700',
+    letterSpacing: -0.2,
+  },
+  chatHeaderSubtitle: {
+    color: '#8E949B',
+    fontSize: 12,
+    marginTop: 2,
+    fontWeight: '400',
+  },
+  chatHeaderActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 18,
+    paddingRight: 6,
+  },
+  headerActionBtn: {
+    padding: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  /* Conversation Messages List */
+  chatScroll: {
+    flex: 1,
+    backgroundColor: '#0E0F12',
+  },
+  chatScrollContent: {
+    paddingHorizontal: 10,
+    paddingTop: 12,
+    paddingBottom: 14,
+  },
+
+  /* Date Badges */
+  dateBadgeWrap: {
+    alignItems: 'center',
+    marginVertical: 12,
+  },
+  dateBadge: {
+    backgroundColor: '#2A2D34',
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 5,
+  },
+  dateBadgeText: {
+    color: '#CCD0D5',
+    fontSize: 12,
+    fontWeight: '500',
+  },
+
+  /* Rows & Avatars */
+  messageRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginVertical: 3,
+  },
+  messageRowMine: {
+    justifyContent: 'flex-end',
+  },
+  messageRowTheirs: {
+    justifyContent: 'flex-start',
+  },
+  avatarColumn: {
+    width: 36,
+    height: 36,
+  },
+  avatarPlaceholder: {
+    width: 36,
+    height: 36,
+  },
+  senderAvatarImg: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+  },
+  bubbleWrapper: {
+    position: 'relative',
+    marginHorizontal: 8,
+  },
+
+  /* Bubble Tails */
+  tailMinePosition: {
+    position: 'absolute',
+    top: 0,
+    right: -7,
+    zIndex: 2,
+  },
+  tailTheirsPosition: {
+    position: 'absolute',
+    top: 0,
+    left: -7,
+    zIndex: 2,
+  },
+
+  /* Call Cards */
+  callCard: {
+    width: 275,
+    paddingHorizontal: 15,
+    paddingTop: 13,
+    paddingBottom: 10,
+  },
+  callCardMine: {
+    backgroundColor: '#035587',
+    borderTopLeftRadius: 18,
+    borderBottomLeftRadius: 18,
+    borderBottomRightRadius: 18,
+    borderTopRightRadius: 3,
+  },
+  callCardTheirs: {
+    backgroundColor: '#282A2F',
+    borderTopRightRadius: 18,
+    borderBottomRightRadius: 18,
+    borderBottomLeftRadius: 18,
+    borderTopLeftRadius: 3,
+  },
+  bubbleNoTailMine: {
+    borderTopRightRadius: 18,
+  },
+  bubbleNoTailTheirs: {
+    borderTopLeftRadius: 18,
+  },
+  callCardContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  callIconCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  callIconCircleMissed: {
+    backgroundColor: '#3FD63C',
+  },
+  callIconCircleDark: {
+    backgroundColor: '#033B5E',
+  },
+  callBody: {
+    flex: 1,
+  },
+  callTitle: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  callSubtitle: {
+    fontSize: 12,
+    marginTop: 3,
+  },
+  callSubtitleTheirs: {
+    color: '#9E9E9E',
+  },
+  callSubtitleMine: {
+    color: '#8CB5D3',
+  },
+  callFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    marginTop: 4,
+  },
+  callTime: {
+    fontSize: 11,
+  },
+  callTimeMine: {
+    color: '#8CB5D3',
+  },
+  callTimeTheirs: {
+    color: '#8E949B',
+  },
+  messageSeenRing: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    borderWidth: 1.5,
+    borderColor: '#00A3FF',
+    marginLeft: 5,
+  },
+
+  /* Text Bubbles */
+  textBubble: {
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: 8,
+    minWidth: 100,
+    maxWidth: 260,
+  },
+  textBubbleMine: {
+    backgroundColor: '#035587',
+    borderTopLeftRadius: 18,
+    borderBottomLeftRadius: 18,
+    borderBottomRightRadius: 18,
+    borderTopRightRadius: 3,
+  },
+  textBubbleTheirs: {
+    backgroundColor: '#282A2F',
+    borderTopRightRadius: 18,
+    borderBottomRightRadius: 18,
+    borderBottomLeftRadius: 18,
+    borderTopLeftRadius: 3,
+  },
+  messageText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    lineHeight: 22,
+  },
+  messagePhoneText: {
+    color: '#1CB0FF',
+    textDecorationLine: 'underline',
+    fontWeight: '500',
+  },
+  textMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    marginTop: 4,
+  },
+  messageTime: {
+    fontSize: 11,
+  },
+
+  /* Reactions Bar */
+  reactionBar: {
+    backgroundColor: '#111215',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+  },
+  reactionItem: {
+    width: 35,
+    height: 35,
+    borderRadius: 10,
+    backgroundColor: '#212328',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  reactionDice: {
+    width: 25,
+    height: 25,
+  },
+  reactionEmojiText: {
+    fontSize: 19,
+    textAlign: 'center',
+  },
+
+  /* Composer Bar */
+  composerBar: {
+    backgroundColor: '#111215',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingTop: 6,
+    paddingBottom: 12,
+  },
+  composerInputWrap: {
+    flex: 1,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#222429',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+  },
+  composerSmileBtn: {
+    padding: 2,
+    marginRight: 8,
+  },
+  composerTextInput: {
+    flex: 1,
+    height: '100%',
+    color: '#FFFFFF',
+    fontSize: 16,
+    paddingVertical: 0,
+  },
+  composerRightActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginLeft: 6,
+  },
+  composerActionIconBtn: {
+    padding: 2,
+  },
+  micCircleBtn: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#00A3FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 10,
+  },
+
+  /* Contacts & Main Screen Styles */
   topBar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -557,6 +1065,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight ?? 0) + 6 : 10,
     paddingBottom: 12,
+    backgroundColor: '#16171B',
   },
   centerIconWrap: {
     flex: 1,
@@ -774,7 +1283,7 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     height: 72,
-    backgroundColor: '#1E1F23',
+    backgroundColor: '#16171B',
     borderTopWidth: 1,
     borderTopColor: '#32343A',
     paddingHorizontal: 30,
@@ -812,298 +1321,5 @@ const styles = StyleSheet.create({
   },
   avatarTextSmall: {
     fontSize: 18,
-  },
-  chatHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 14,
-    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight ?? 0) + 4 : 8,
-    paddingBottom: 12,
-    backgroundColor: '#1E1F23',
-    borderBottomWidth: 1,
-    borderBottomColor: '#2A2B31',
-  },
-  chatHeaderBack: {
-    width: 42,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  chatHeaderCenter: {
-    flex: 1,
-    marginLeft: 6,
-  },
-  chatHeaderTitle: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  chatHeaderSubtitle: {
-    color: '#8E949B',
-    fontSize: 12,
-    marginTop: 3,
-  },
-  chatHeaderActions: {
-    width: 120,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  chatScroll: {
-    flex: 1,
-    backgroundColor: '#101114',
-  },
-  chatScrollContent: {
-    paddingHorizontal: 10,
-    paddingTop: 14,
-    paddingBottom: 10,
-  },
-  dateBadge: {
-    alignSelf: 'center',
-    backgroundColor: '#3A3B40',
-    borderRadius: 18,
-    paddingHorizontal: 18,
-    paddingVertical: 7,
-    marginVertical: 10,
-  },
-  dateBadgeText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  messageRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 10,
-  },
-  messageRowMine: {
-    justifyContent: 'flex-end',
-  },
-  messageRowTheirs: {
-    justifyContent: 'flex-start',
-  },
-  messageBubble: {
-    maxWidth: 250,
-    minWidth: 136,
-    borderRadius: 24,
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-  },
-  messageBubbleWrap: {
-    position: 'relative',
-    marginHorizontal: 8,
-  },
-  bubbleContainerMine: {
-    position: 'relative',
-    marginHorizontal: 8,
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-  },
-  messageBubbleWrapMine: {
-    marginRight: 2,
-  },
-  messageBubbleWrapTheirs: {},
-  messageBubbleMine: {
-    backgroundColor: '#045D94',
-    borderWidth: 1,
-    borderColor: '#0C6FAE',
-    borderTopRightRadius: 2,
-  },
-  messageBubbleTheirs: {
-    backgroundColor: '#2E2C2D',
-  },
-  sentAvatarWrap: {
-    marginLeft: 14,
-    marginTop: -2,
-  },
-  messageText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    lineHeight: 22,
-  },
-  messageMetaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    marginTop: 6,
-  },
-  messageTime: {
-    color: '#A9B2B7',
-    fontSize: 10,
-  },
-  messageSeenDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    borderWidth: 2,
-    borderColor: '#11A4FF',
-    marginLeft: 6,
-  },
-  imageCardWrap: {
-    position: 'relative',
-    marginHorizontal: 8,
-  },
-  imageCardWrapMine: {
-    marginRight: 2,
-  },
-  imageCardWrapTheirs: {},
-  imageCard: {
-    width: 272,
-    borderRadius: 26,
-    padding: 6,
-  },
-  imageCardMine: {
-    backgroundColor: '#045D94',
-    borderWidth: 1,
-    borderColor: '#0C6FAE',
-    borderTopRightRadius: 2,
-  },
-  imageCardTheirs: {
-    backgroundColor: '#2E2C2D',
-  },
-  imageMock: {
-    borderRadius: 22,
-    height: 330,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 18,
-  },
-  imageMockPaper: {
-    backgroundColor: '#9C8450',
-  },
-  imageMockPortrait: {
-    backgroundColor: '#88DDF2',
-  },
-  imageMockLabel: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  imageMetaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    paddingHorizontal: 10,
-    paddingTop: 8,
-    paddingBottom: 4,
-  },
-  callCardWrap: {
-    position: 'relative',
-    marginHorizontal: 8,
-  },
-  callCardWrapMine: {
-    marginRight: 2,
-  },
-  callCardWrapTheirs: {},
-  callCard: {
-    width: 258,
-    borderRadius: 24,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderTopRightRadius: 2,
-  },
-  callCardMine: {
-    backgroundColor: '#045D94',
-    borderWidth: 1,
-    borderColor: '#0C6FAE',
-  },
-  callCardTheirs: {
-    backgroundColor: '#2E2C2D',
-  },
-  callCardContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  callIconCircle: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-  },
-  callIconCircleMissed: {
-    backgroundColor: '#57D654',
-  },
-  callIconCircleDone: {
-    backgroundColor: '#0D3553',
-  },
-  callBody: {
-    flex: 1,
-  },
-  callTitle: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  callSubtitle: {
-    color: '#A9B2B7',
-    fontSize: 11,
-    marginTop: 4,
-  },
-  callFooter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    marginTop: 8,
-  },
-  callTime: {
-    color: '#A9B2B7',
-    fontSize: 11,
-  },
-  reactionBar: {
-    backgroundColor: '#101114',
-    paddingHorizontal: 10,
-    paddingBottom: 8,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  reactionItem: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
-    backgroundColor: '#2A2B30',
-    textAlign: 'center',
-    lineHeight: 34,
-    fontSize: 22,
-  },
-  composerBar: {
-    backgroundColor: '#101114',
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingTop: 6,
-    paddingBottom: 12,
-  },
-  composerInput: {
-    flex: 1,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#2A2B30',
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 14,
-  },
-  composerPlaceholder: {
-    color: '#A0A4AA',
-    fontSize: 16,
-    marginLeft: 10,
-    flex: 1,
-  },
-  composerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-  },
-  micButton: {
-    width: 58,
-    height: 58,
-    borderRadius: 29,
-    backgroundColor: '#08A4FF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: 10,
-  },
-  micText: {
-    fontSize: 26,
   },
 });

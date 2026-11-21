@@ -1,86 +1,104 @@
 [
   {
     "contactId": "c3",
-    "lastSeen": "Last seen 8:41 PM",
+    "lastSeen": "Last seen Mar 22, 11:34 PM",
     "messages": [
       {
-        "id": "c3-m6",
+        "id": "c3-d1",
+        "type": "date",
+        "label": "Feb 27, 2025"
+      },
+      {
+        "id": "c3-m1",
+        "type": "call",
+        "sender": "me",
+        "title": "Video call",
+        "subtitle": "9 min 28 sec",
+        "time": "9:51 PM",
+        "callTone": "video",
+        "showAvatar": true
+      },
+      {
+        "id": "c3-d2",
+        "type": "date",
+        "label": "Feb 28, 2025"
+      },
+      {
+        "id": "c3-m2",
         "type": "call",
         "sender": "them",
         "title": "Missed video call",
         "subtitle": "Tap to call",
-        "time": "10:45 PM",
-        "callTone": "missed"
-      },
-      {
-        "id": "c3-m7",
-        "type": "call",
-        "sender": "me",
-        "title": "Video call",
-        "subtitle": "2 min 54 sec",
-        "time": "10:50 PM",
-        "callTone": "done"
-      },
-      {
-        "id": "c3-m8",
-        "type": "image",
-        "sender": "me",
-        "time": "10:51 PM",
-        "caption": "Portrait photo",
-        "imageTone": "portrait"
-      },
-      {
-        "id": "c3-d1",
-        "type": "date",
-        "label": "Sep 23, 2024"
-      },
-      {
-        "id": "c3-m1",
-        "type": "text",
-        "sender": "me",
-        "text": "01715-325692",
-        "time": "9:21 AM"
-      },
-      {
-        "id": "c3-m2",
-        "type": "text",
-        "sender": "me",
-        "text": "kotha hoise",
-        "time": "11:24 AM"
+        "time": "5:31 PM",
+        "callTone": "missed",
+        "showAvatar": true
       },
       {
         "id": "c3-m3",
-        "type": "text",
-        "sender": "me",
-        "text": "kire jaitasos",
-        "time": "4:39 PM"
+        "type": "call",
+        "sender": "them",
+        "title": "Missed video call",
+        "subtitle": "Tap to call",
+        "time": "8:34 PM",
+        "callTone": "missed",
+        "showAvatar": false
       },
       {
         "id": "c3-m4",
-        "type": "text",
+        "type": "call",
         "sender": "me",
-        "text": "??",
-        "time": "4:39 PM"
+        "title": "Canceled",
+        "subtitle": "Tap to call again",
+        "time": "8:37 PM",
+        "callTone": "canceled",
+        "showAvatar": true
+      },
+      {
+        "id": "c3-d3",
+        "type": "date",
+        "label": "May 5, 2025"
       },
       {
         "id": "c3-m5",
         "type": "text",
         "sender": "me",
-        "text": "khokon jabii",
-        "time": "4:39 PM"
+        "text": "01928-805041",
+        "isPhone": true,
+        "time": "3:00 PM",
+        "showAvatar": true
       },
       {
-        "id": "c3-d2",
-        "type": "date",
-        "label": "Sep 24, 2024"
-      },
-      {
-        "id": "c3-m9",
-        "type": "image",
+        "id": "c3-m6",
+        "type": "text",
         "sender": "me",
-        "time": "4:43 PM",
-        "caption": "Math note photo",
-        "imageTone": "paper"
+        "text": "rony",
+        "time": "3:00 PM",
+        "showAvatar": false
+      },
+      {
+        "id": "c3-d4",
+        "type": "date",
+        "label": "Aug 9, 2025"
+      },
+      {
+        "id": "c3-m7",
+        "type": "call",
+        "sender": "me",
+        "title": "Canceled",
+        "subtitle": "Tap to call again",
+        "time": "12:43 PM",
+        "callTone": "canceled",
+        "showAvatar": true
+      },
+      {
+        "id": "c3-m8",
+        "type": "call",
+        "sender": "me",
+        "title": "Canceled",
+        "subtitle": "Tap to call again",
+        "time": "12:44 PM",
+        "callTone": "canceled",
+        "showAvatar": false
       }
     ]
   },

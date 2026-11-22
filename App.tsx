@@ -3,6 +3,7 @@ import { SafeAreaView, StatusBar, StyleSheet, View } from 'react-native';
 import { AddContactModal } from './src/components/modals/AddContactModal';
 import { defaultStories } from './src/constants/assets';
 import { Colors } from './src/constants/colors';
+import { NavigationProvider, useNavigation } from './src/navigation/NavigationContext';
 import { ConversationScreen } from './src/screens/ConversationScreen';
 import { HomeScreen } from './src/screens/HomeScreen';
 import { fetchDeviceContacts } from './src/services/contactsService';
@@ -11,14 +12,15 @@ import { ContactItem, ConversationItem, ConversationThread } from './src/types';
 const initialContacts = require('./db/contact.json') as ContactItem[];
 const initialConversations = require('./db/conversations.json') as ConversationThread[];
 
-export default function App() {
+function MainApp() {
+  const { currentRoute, navigateToConversation, goBack } = useNavigation();
+
   const [contactsList, setContactsList] = useState<ContactItem[]>(initialContacts);
   const [importedContacts, setImportedContacts] = useState<ContactItem[]>([]);
   const [loadedImportedCount, setLoadedImportedCount] = useState(20);
   const [isLoadingContacts, setIsLoadingContacts] = useState(false);
 
   const [conversationsList, setConversationsList] = useState<ConversationThread[]>(initialConversations);
-  const [activeContactId, setActiveContactId] = useState<string | null>(null);
 
   // Modal State
   const [isAddModalVisible, setIsAddModalVisible] = useState(false);
@@ -61,9 +63,11 @@ export default function App() {
     }
   };
 
-  // 4. Active conversation & contact
+  // 4. Active conversation & contact from navigation route
+  const activeContactId = currentRoute.name === 'Conversation' ? currentRoute.params.contactId : null;
+
   const activeContact = useMemo(
-    () => allContacts.find((item) => item.id === activeContactId) ?? null,
+    () => (activeContactId ? allContacts.find((item) => item.id === activeContactId) ?? null : null),
     [allContacts, activeContactId]
   );
 
@@ -133,11 +137,11 @@ export default function App() {
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="light-content" backgroundColor={Colors.headerDark} />
       <View style={styles.screen}>
-        {activeContact ? (
+        {currentRoute.name === 'Conversation' && activeContact ? (
           <ConversationScreen
             contact={activeContact}
             conversation={activeConversation}
-            onBack={() => setActiveContactId(null)}
+            onBack={goBack}
             onSendMessage={handleSendMessage}
           />
         ) : (
@@ -146,7 +150,7 @@ export default function App() {
             stories={defaultStories}
             hasMoreToLoad={hasMoreToLoad}
             onLoadMoreContacts={handleLoadMoreContacts}
-            onSelectContact={(c) => setActiveContactId(c.id)}
+            onSelectContact={(c) => navigateToConversation(c.id)}
             onOpenAddModal={() => {
               setInitialShowManual(false);
               setIsAddModalVisible(true);
@@ -166,13 +170,21 @@ export default function App() {
         deviceContacts={importedContacts}
         isLoadingContacts={isLoadingContacts}
         onSelectContact={(c) => {
-          setActiveContactId(c.id);
+          navigateToConversation(c.id);
           setIsAddModalVisible(false);
         }}
         onAddManualContact={handleAddManualContact}
         initialShowManual={initialShowManual}
       />
     </SafeAreaView>
+  );
+}
+
+export default function App() {
+  return (
+    <NavigationProvider>
+      <MainApp />
+    </NavigationProvider>
   );
 }
 

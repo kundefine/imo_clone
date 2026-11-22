@@ -6,8 +6,8 @@ import {
   Text,
   View,
 } from 'react-native';
+import { BottomBar } from '../components/home/BottomBar';
 import { ContactListItem } from '../components/home/ContactListItem';
-import { FloatingActions } from '../components/home/FloatingActions';
 import { StoriesRow } from '../components/home/StoriesRow';
 import { TopBar } from '../components/home/TopBar';
 import { Colors } from '../constants/colors';
@@ -39,6 +39,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
       {/* Contact List using performant FlatList */}
       <FlatList
+        style={styles.list}
         data={contacts}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
@@ -55,7 +56,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               <Text style={styles.lazyLoadText}>Loading more contacts...</Text>
             </View>
           ) : (
-            <View style={{ height: 76 }} />
+            <View style={{ height: 16 }} />
           )
         }
         onEndReached={onLoadMoreContacts}
@@ -64,8 +65,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         showsVerticalScrollIndicator={false}
       />
 
-      {/* Floating Action Buttons */}
-      <FloatingActions
+      {/* Imo Fixed Bottom Bar (+ on left, Search on right) */}
+      <BottomBar
         onAddPress={onOpenManualAddModal}
         onSearchPress={onOpenAddModal}
       />
@@ -78,8 +79,11 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.backgroundDark,
   },
+  list: {
+    flex: 1,
+  },
   scrollContent: {
-    paddingBottom: 20,
+    paddingBottom: 8,
   },
   lazyLoadFooter: {
     flexDirection: 'row',

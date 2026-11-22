@@ -1,7 +1,7 @@
 import { FontAwesome5 } from '@expo/vector-icons';
 import { ArrowLeft, MoreVertical } from 'lucide-react-native';
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Platform, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Colors } from '../../constants/colors';
 import { ContactItem } from '../../types';
 
@@ -70,12 +70,14 @@ export const ConversationHeader: React.FC<ConversationHeaderProps> = ({
   );
 };
 
+const statusBarHeight = Platform.OS === 'android' ? (StatusBar.currentHeight ?? 0) : 0;
+
 const styles = StyleSheet.create({
   chatHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 12,
-    paddingTop: 8,
+    paddingTop: statusBarHeight > 0 ? statusBarHeight + 6 : 12,
     paddingBottom: 10,
     backgroundColor: Colors.headerDark,
     borderBottomWidth: 1,

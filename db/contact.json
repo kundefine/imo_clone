@@ -72,5 +72,14 @@
     "date": "Jul 2025",
     "avater": "../assets/avater/contact_sumaiya.png",
     "icon": "phone"
+  },
+  {
+    "id": "c9",
+    "name": "Mahmuda",
+    "subtitle": "❤️",
+    "subtitleType": "emoji",
+    "date": "Jul 2025",
+    "avater": "../assets/avater/contact_sumaiya.png",
+    "icon": "phone"
   }
 ]

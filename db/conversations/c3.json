@@ -1,0 +1,105 @@
+[
+    {
+    "contactId": "c3",
+    "lastSeen": "Last seen Mar 22, 11:34 PM",
+    "messages": [
+      {
+        "id": "c3-d1",
+        "type": "date",
+        "label": "Feb 27, 2025"
+      },
+      {
+        "id": "c3-m1",
+        "type": "call",
+        "sender": "me",
+        "title": "Video call",
+        "subtitle": "9 min 28 sec",
+        "time": "9:51 PM",
+        "callTone": "video",
+        "showAvatar": true
+      },
+      {
+        "id": "c3-d2",
+        "type": "date",
+        "label": "Feb 28, 2025"
+      },
+      {
+        "id": "c3-m2",
+        "type": "call",
+        "sender": "them",
+        "title": "Missed video call",
+        "subtitle": "Tap to call",
+        "time": "5:31 PM",
+        "callTone": "missed",
+        "showAvatar": true
+      },
+      {
+        "id": "c3-m3",
+        "type": "call",
+        "sender": "them",
+        "title": "Missed video call",
+        "subtitle": "Tap to call",
+        "time": "8:34 PM",
+        "callTone": "missed",
+        "showAvatar": false
+      },
+      {
+        "id": "c3-m4",
+        "type": "call",
+        "sender": "me",
+        "title": "Canceled",
+        "subtitle": "Tap to call again",
+        "time": "8:37 PM",
+        "callTone": "canceled",
+        "showAvatar": true
+      },
+      {
+        "id": "c3-d3",
+        "type": "date",
+        "label": "May 5, 2025"
+      },
+      {
+        "id": "c3-m5",
+        "type": "text",
+        "sender": "me",
+        "text": "01928-805041",
+        "isPhone": true,
+        "time": "3:00 PM",
+        "showAvatar": true
+      },
+      {
+        "id": "c3-m6",
+        "type": "text",
+        "sender": "me",
+        "text": "rony",
+        "time": "3:00 PM",
+        "showAvatar": false
+      },
+      {
+        "id": "c3-d4",
+        "type": "date",
+        "label": "Aug 9, 2025"
+      },
+      {
+        "id": "c3-m7",
+        "type": "call",
+        "sender": "me",
+        "title": "Canceled",
+        "subtitle": "Tap to call again",
+        "time": "12:43 PM",
+        "callTone": "canceled",
+        "showAvatar": true
+      },
+      {
+        "id": "c3-m8",
+        "type": "call",
+        "sender": "me",
+        "title": "Canceled",
+        "subtitle": "Tap to call again",
+        "time": "12:44 PM",
+        "callTone": "canceled",
+        "showAvatar": false
+      }
+    ]
+  }
+]

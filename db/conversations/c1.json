@@ -1,0 +1,23 @@
+[
+     {
+    "contactId": "c1",
+    "lastSeen": "Online",
+    "messages": [
+      { "id": "c1-d1", "type": "date", "label": "Today" },
+      {
+        "id": "c1-m1",
+        "type": "text",
+        "sender": "them",
+        "text": "When will you come?",
+        "time": "7:12 PM"
+      },
+      {
+        "id": "c1-m2",
+        "type": "text",
+        "sender": "me",
+        "text": "I am on the way.",
+        "time": "7:14 PM"
+      }
+    ]
+  }
+]
